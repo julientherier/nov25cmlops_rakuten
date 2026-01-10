@@ -13,4 +13,6 @@ tqdm
 typer
 httpx
 prometheus-fastapi-instrumentator
+dvc[s3]
+boto3
 -e .

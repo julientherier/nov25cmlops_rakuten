@@ -9,7 +9,7 @@ PYTHON_INTERPRETER := python
 # Docker compose command (supports docker-compose v1 or docker compose v2)
 COMPOSE_CMD := $(shell \
 	if command -v docker-compose >/dev/null 2>&1; then \
-		echo docker-compose; \
+		echo docker compose; \
 	else \
 		echo docker compose; \
 	fi \
@@ -66,6 +66,27 @@ clean:
 	find . -type d -name "__pycache__" -delete
 
 #################################################################################
+# DVC & DAGHUB     			                                       				#
+#################################################################################
+
+## Initialize DVC config.local with credentials 
+.PHONY: dvc-credentials
+dvc-credentials:
+	@echo "Création du fichier .dvc/config.local avec les identifiants DagsHub"
+	@read -p "Enter DagsHub Access Key ID: " ACCESS_KEY; \
+	read -p "Enter DagsHub Secret Access Key: " SECRET_KEY; \
+	dvc remote modify origin --local access_key_id $$ACCESS_KEY; \
+	dvc remote modify origin --local secret_access_key $$SECRET_KEY;
+	@echo ".dvc/config.local crée avec succès."
+
+## Test DVC connection to Dagshub s3 remote storage
+.PHONY: dvc-test
+dvc-test:
+	@echo "Test connexion DVC vers DagsHub..."
+	@dvc status && echo "Connected to DagsHub" || echo "Connection failed"
+
+
+#################################################################################
 # DOCKER COMPOSE
 #################################################################################
 
@@ -77,7 +98,7 @@ docker-build:
 ## Start the full stack (nginx + gateway + services)
 .PHONY: docker-up
 docker-up:
-	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST)
+	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_SETUP) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST)
 
 ## Stop everything (keep volumes)
 .PHONY: docker-down

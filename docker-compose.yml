@@ -27,6 +27,10 @@ services:
       context: .
       dockerfile: docker/api-service/Dockerfile
     container_name: rakuten-ingest
+    environment:
+      DAGSHUB_USER: ${DAGSHUB_USER}
+      DAGSHUB_REPO: ${DAGSHUB_REPO}
+      DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
     volumes:
       - rakuten_data:/app/data
       - rakuten_uploads:/app/data/raw/uploads

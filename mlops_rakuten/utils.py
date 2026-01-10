@@ -9,6 +9,8 @@ from box.exceptions import BoxValueError
 from loguru import logger
 import pandas as pd
 import yaml
+import subprocess
+from typing import List
 
 
 def read_yaml(path_to_yaml: Path) -> ConfigBox:
@@ -139,3 +141,21 @@ def get_latest_run_dir(parent_dir: Path) -> Path:
     logger.info(f"Dernier run détecté : {latest_dir.name}")
 
     return latest_dir
+
+
+def run(cmd: List[str], cwd: Path = Path(".")):
+    subprocess.run(cmd, cwd=cwd, check=True)
+
+def dvc_add(files: List[Path]):
+    for f in files:
+        run(["dvc", "add", str(f)])
+
+def dvc_push(remote: str = "origin"):
+    run(["dvc", "push", "-r", remote])
+
+def git_commit(files: List[Path], message: str):
+    run(["git", "add"] + [str(f) for f in files])
+    run(["git", "commit", "-m", message])
+
+#def git_push(branch: str = "main"):
+ #   run(["git", "push", "origin", branch])
