@@ -28,3 +28,7 @@ class DataTransformationPipeline:
             f"Pipeline DataTransformation terminé. Artefacts disponibles dans : {output_dir}"
         )
         return output_dir
+
+if __name__ == "__main__":
+    pipeline = DataTransformationPipeline()
+    pipeline.run()

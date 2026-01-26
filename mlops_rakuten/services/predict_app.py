@@ -13,15 +13,9 @@ from mlops_rakuten.services.schemas import (
     PredictionRequest,
     PredictionResponse,
 )
-from mlops_rakuten.utils import get_latest_run_dir
+
 
 app = FastAPI(title="Rakuten Predict API", version="1.0.0")
-
-
-def _mtime(p: Path) -> Optional[str]:
-    if not p.exists():
-        return None
-    return datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc).isoformat()
 
 
 @app.get("/health")
@@ -32,8 +26,6 @@ def health():
 @app.post("/predict", response_model=PredictionResponse)
 def predict(payload: PredictionRequest) -> PredictionResponse:
     pipe = PredictionPipeline()
-
-    # On garde la logique de ton ancien api.py (texts=[designation])
     results_per_text = pipe.run(
         texts=[payload.designation], top_k=payload.top_k)
     preds_raw = results_per_text[0]
@@ -52,4 +44,4 @@ def predict(payload: PredictionRequest) -> PredictionResponse:
 
 @app.get("/info")
 def model_info() -> Dict[str, Any]:
-    return {"status": "Work-in-progress", "message": "Use MLFlow to get model metrics"}
+    return {"status": "Work in progress", "message": "Use MLFlow to get model metrics"}

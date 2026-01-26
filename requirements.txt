@@ -15,4 +15,6 @@ httpx
 prometheus-fastapi-instrumentator
 dvc[s3]
 boto3
+dagshub
+mlflow
 -e .

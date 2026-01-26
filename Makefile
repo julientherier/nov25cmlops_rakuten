@@ -21,10 +21,7 @@ SVC_GATEWAY := gateway
 SVC_PREDICT := api-predict
 SVC_TRAIN   := api-train
 SVC_INGEST  := api-ingest
-
-# Data injection
-TRAIN_CSV_LOCAL ?= data/interim/rakuten_train.csv
-TRAIN_CSV_DEST  ?= /app/data/interim/rakuten_train.csv
+SVC_DVC	 := dvc-runner
 
 #################################################################################
 # PYTHON (LOCAL)
@@ -98,7 +95,7 @@ docker-build:
 ## Start the full stack (nginx + gateway + services)
 .PHONY: docker-up
 docker-up:
-	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_SETUP) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST)
+	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST) $(SVC_DVC)
 
 ## Stop everything (keep volumes)
 .PHONY: docker-down

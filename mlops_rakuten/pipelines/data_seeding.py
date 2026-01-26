@@ -25,3 +25,7 @@ class DataSeedingPipeline:
 
         logger.success(f"Pipeline DataIngestion terminé. Fichier créé : {output_path}")
         return output_path
+
+if __name__ == "__main__":
+    pipeline = DataSeedingPipeline()
+    pipeline.run()

@@ -1,0 +1,111 @@
+# DVC Pipeline Configuration
+# MLOps Rakuten - Product Classification
+#
+# Run with: dvc repro
+# Visualize: dvc dag
+# See metrics: dvc metrics show
+
+stages:
+  # Stage 1: Seeding - prépare le dataset initial
+  seed:
+    cmd: python mlops_rakuten/pipelines/data_seeding.py
+    deps:
+      - data/raw/rakuten/X_train_update.csv
+      - data/raw/rakuten/Y_train_CVw08PX.csv
+      - data/raw/product_categories.csv
+      - mlops_rakuten/modules/data_seeding.py
+      - mlops_rakuten/pipelines/data_seeding.py
+      - mlops_rakuten/main.py
+      - mlops_rakuten/config/config.yml
+    outs:
+      # V0 Baseline - 10 batches de 1000 rows + remainder, on track cela pour avoir les csv a ingestés ensuite incrémentalement. Sera tracké à l'initialisation uniquement.
+      - data/raw/rakuten/seeds/rakuten_batch_0001.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0002.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0003.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0004.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0005.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0006.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0007.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0008.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0009.csv
+      - data/raw/rakuten/seeds/rakuten_batch_0010.csv
+      - data/raw/rakuten/seeds/rakuten_dataset_full.csv # Full dataset
+      - data/raw/rakuten/seeds/rakuten_dataset_remainder.csv # Remaining data
+    params:
+      - mlops_rakuten/config/config.yml:
+          - data_seeding
+
+  # Optionnel : ingestion incrémentale de nouvelles données, gèré par un tracking dvc externe sur l'output data/interim/rakuten_train.csv
+
+  # Stage 2: Data Preprocessing - nettoyage et préparation
+  preprocess:
+    cmd: python mlops_rakuten/pipelines/data_preprocessing.py
+    deps:
+      - data/interim/rakuten_train.csv
+      - mlops_rakuten/modules/data_preprocessing.py
+      - mlops_rakuten/pipelines/data_preprocessing.py
+      - mlops_rakuten/config/config.yml
+    outs:
+      - data/interim/preprocessed_dataset.csv
+    params:
+      - mlops_rakuten/config/config.yml:
+          - data_preprocessing
+
+  # Stage 3: Data Transformation - vectorisation + split train/test
+  transform:
+    cmd: python mlops_rakuten/pipelines/data_transformation.py
+    deps:
+      - data/interim/preprocessed_dataset.csv
+      - mlops_rakuten/modules/data_transformation.py
+      - mlops_rakuten/pipelines/data_transformation.py
+      - mlops_rakuten/config/config.yml
+    outs:
+      - data/processed/class_mapping.json
+      - data/processed/X_train_tfidf.npz
+      - data/processed/X_val_tfidf.npz
+      - data/processed/y_train.npy
+      - data/processed/y_val.npy
+      - data/processed/tfidf_vectorizer.pkl
+      - data/processed/label_encoder.pkl
+    params:
+      - mlops_rakuten/config/config.yml:
+          - data_transformation
+
+  # Stage 4: Model Training - entraîne le modèle
+  train:
+    cmd: python mlops_rakuten/pipelines/model_trainer.py
+    deps:
+      - data/processed/X_train_tfidf.npz
+      - data/processed/y_train.npy
+      - mlops_rakuten/modules/model_trainer.py
+      - mlops_rakuten/pipelines/model_trainer.py
+      - mlops_rakuten/config/config.yml
+    outs:
+      - models/text_classifier.pkl
+    metrics:
+      - models/metrics_train.json
+      - models/model_config.json
+      - models/classification_report_train.txt
+      - models/mlflow_run_metadata.json
+
+    params:
+      - mlops_rakuten/config/config.yml:
+          - model_trainer
+
+  # Stage 5: Model Evaluation - évalue le modèle sur le test set
+  evaluate:
+    cmd: python mlops_rakuten/pipelines/model_evaluation.py
+    deps:
+      - models/text_classifier.pkl
+      - models/mlflow_run_metadata.json
+      - mlops_rakuten/modules/model_evaluation.py
+      - mlops_rakuten/pipelines/model_evaluation.py
+      - mlops_rakuten/config/config.yml
+    metrics:
+      - reports/metrics_val.json
+      - reports/classification_report_val.txt
+      - reports/confusion_matrix_val.txt
+      - models/mlflow_run_metadata.json
+    params:
+      - mlops_rakuten/config/config.yml:
+          - model_evaluation

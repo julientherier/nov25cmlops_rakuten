@@ -28,3 +28,7 @@ class ModelEvaluationPipeline:
             f"Métriques de validation disponibles dans : {metrics_path}"
         )
         return metrics_path
+
+if __name__ == "__main__":  
+    pipeline = ModelEvaluationPipeline()
+    pipeline.run()

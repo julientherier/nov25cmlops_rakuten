@@ -31,10 +31,13 @@ services:
       DAGSHUB_USER: ${DAGSHUB_USER}
       DAGSHUB_REPO: ${DAGSHUB_REPO}
       DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
+ 
     volumes:
       - rakuten_data:/app/data
       - rakuten_uploads:/app/data/raw/uploads
       - rakuten_logs:/app/logs
+      - rakuten_dvc:/app/.dvc
+      - /var/run/docker.sock:/var/run/docker.sock
     command: ["uvicorn", "mlops_rakuten.services.ingest_app:app", "--host", "0.0.0.0", "--port", "8000"]
     networks: [rakuten-net]
     restart: unless-stopped
@@ -49,12 +52,23 @@ services:
       context: .
       dockerfile: docker/api-service/Dockerfile
     container_name: rakuten-train
+    environment:
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME}
+      MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD}
+      DAGSHUB_USER: ${DAGSHUB_USER}
+      DAGSHUB_REPO: ${DAGSHUB_REPO}
+      DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
+    env_file: .env  
     volumes:
       - rakuten_data:/app/data
       - rakuten_models:/app/models
       - rakuten_reports:/app/reports
       - rakuten_uploads:/app/data/raw/uploads
       - rakuten_logs:/app/logs
+      - rakuten_dvc:/app/.dvc
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./mlruns:/app/mlruns
     command: ["uvicorn", "mlops_rakuten.services.train_app:app", "--host", "0.0.0.0", "--port", "8000"]
     networks: [rakuten-net]
     restart: unless-stopped
@@ -69,12 +83,22 @@ services:
       context: .
       dockerfile: docker/api-service/Dockerfile
     container_name: rakuten-predict
+    environment:
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME}
+      MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD}
+      DAGSHUB_USER: ${DAGSHUB_USER}
+      DAGSHUB_REPO: ${DAGSHUB_REPO}
+      DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
+    env_file: .env  
     volumes:
       - rakuten_data:/app/data
       - rakuten_models:/app/models
       - rakuten_reports:/app/reports
       - rakuten_uploads:/app/data/raw/uploads
       - rakuten_logs:/app/logs
+      - rakuten_dvc:/app/.dvc
+      - /var/run/docker.sock:/var/run/docker.sock
     command: ["uvicorn", "mlops_rakuten.services.predict_app:app", "--host", "0.0.0.0", "--port", "8000"]
     networks: [rakuten-net]
     restart: unless-stopped
@@ -83,6 +107,43 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  dvc-runner:
+    build:
+      context: .
+      dockerfile: docker/dvc-runner/Dockerfile
+    container_name: rakuten-dvc-runner
+    working_dir: /app
+    
+    volumes:
+      - .:/app  
+      - rakuten_data:/app/data
+      - rakuten_models:/app/models
+      - rakuten_reports:/app/reports
+      - rakuten_dvc:/app/.dvc
+      - ./dvc.yaml:/app/dvc.yaml:ro
+    
+    # DagsHub credentials
+    environment:
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME}
+      MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD}
+      DAGSHUB_USER: ${DAGSHUB_USER}
+      DAGSHUB_REPO: ${DAGSHUB_REPO}
+      DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
+
+    env_file: .env  
+    
+    networks:
+      - rakuten-net
+    profiles:
+      - dvc
+    
+    restart: "no"
+    stdin_open: true
+    tty: true
+
+
 
   nginx:
     image: nginx:1.25-alpine
@@ -150,6 +211,8 @@ volumes:
     name: rakuten_uploads
   rakuten_logs:
     name: rakuten_logs
+  rakuten_dvc:
+    name: rakuten_dvc
   rakuten_prometheus_data:
     name: rakuten_prometheus_data
   rakuten_grafana_data:
