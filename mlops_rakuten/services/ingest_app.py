@@ -101,7 +101,7 @@ def init_dataset() -> Dict[str, Any]:
         
         # Pull les données brutes nécessaires, possible grace au remote DVC/Dagshub et au pointeur .dvc
         logger.info("Pulling raw data...")
-        dvc_runner("dvc pull data/raw/rakuten/X_train_update.csv data/raw/rakuten/Y_train_CVw08PX.csv data/raw/product_categories.csv")
+        dvc_runner("dvc pull 2>&1 || true")
         
         # Exécute la stage seed
         logger.info("Running seed stage...")
