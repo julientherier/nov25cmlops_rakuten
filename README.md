@@ -206,6 +206,9 @@ $ ls data/raw/rakuten
 
 ## Données requises
 
+### DVC
+
+
 ### Exécution via Docker
 
 Pour pouvoir entraîner un modèle, le fichier suivant doit exister **dans le volume Docker** :
