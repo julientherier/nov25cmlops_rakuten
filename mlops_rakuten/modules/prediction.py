@@ -66,7 +66,7 @@ class Prediction:
                 "Le fichier de correspondance requis est invalide ou indisponible. "
                 "Veuillez suivre les instructions du README pour les obtenir."
             )
-        logger.info("✓ Fichiers disponibles")
+        logger.info("Fichiers disponibles")
 
     def _load_artifacts(self) -> None:
         """
@@ -117,7 +117,7 @@ class Prediction:
                 f"Mapping catégories chargé ({len(self.category_mapping)} entrées)"
             )
 
-        logger.success("✓ Initialisation de Prediction terminée")
+        logger.success("Initialisation de Prediction terminée")
 
     def _load_model_from_mlflow(self) -> None:
         """
@@ -138,7 +138,7 @@ class Prediction:
 
             except Exception as e:
                 logger.warning(f"Impossible de charger depuis MLflow: {e}")
-                logger.warning("  → Fallback vers fichier local")
+                logger.warning("Fallback vers fichier local")
 
         # Charger depuis fichier local
         logger.info(f"Chargement du modèle depuis fichier local: {cfg.model_path}")
@@ -149,6 +149,29 @@ class Prediction:
         except Exception as e:
             logger.error(f"Impossible de charger le modèle: {e}")
             raise
+
+    def get_model_info(self) -> dict:
+        """Retourne des informations sur le modèle chargé."""
+
+        client = mlflow.tracking.MlflowClient()
+        version = client.get_model_version_by_alias(
+            name=self.MODEL_REGISTRY_NAME, alias="production"
+        )
+        run = client.get_run(run_id=version.run_id)
+
+        metrics = {
+            k: v for k, v in run.data.metrics.items()
+            if k.startswith("val_")
+        }
+        
+        return {
+            "version": version.version,
+            "status": version.status,
+            "metrics": metrics,
+            "created_at": version.creation_timestamp,
+            "alias": "production"
+        }
+    
 
     def predict(self, texts, top_k: int | None = None):
         """

@@ -68,7 +68,6 @@ services:
       - rakuten_logs:/app/logs
       - rakuten_dvc:/app/.dvc
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./mlruns:/app/mlruns
     command: ["uvicorn", "mlops_rakuten.services.train_app:app", "--host", "0.0.0.0", "--port", "8000"]
     networks: [rakuten-net]
     restart: unless-stopped
@@ -136,9 +135,6 @@ services:
     
     networks:
       - rakuten-net
-    profiles:
-      - dvc
-    
     restart: "no"
     stdin_open: true
     tty: true

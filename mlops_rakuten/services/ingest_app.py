@@ -103,9 +103,9 @@ def init_dataset() -> Dict[str, Any]:
         logger.info("Pulling raw data...")
         dvc_runner("dvc pull data/raw/rakuten/X_train_update.csv data/raw/rakuten/Y_train_CVw08PX.csv data/raw/product_categories.csv")
         
-        # Exécute la stage seed, on force pour être sûr de l'exécuter si l'on veut aussi re-initialiser
+        # Exécute la stage seed
         logger.info("Running seed stage...")
-        dvc_runner("dvc repro seed --force")
+        dvc_runner("dvc repro seed")
 
         # Track de rakuten_train.csv, il faut ajouter ce fichier sur le host pour qu'il soit tracké via git commit et push
         logger.info("Tracking rakuten_train with DVC...")

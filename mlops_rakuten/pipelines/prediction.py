@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any, Dict, Optional
 
 from loguru import logger
 
@@ -24,3 +24,6 @@ class PredictionPipeline:
         preds = self.infer.predict(texts, top_k=top_k)
         logger.success("Inférence terminée")
         return preds
+
+    def get_model_info(self) -> Optional[Dict[str, Any]]:
+        return self.infer.get_model_info()

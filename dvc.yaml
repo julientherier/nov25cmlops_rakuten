@@ -105,7 +105,6 @@ stages:
       - reports/metrics_val.json
       - reports/classification_report_val.txt
       - reports/confusion_matrix_val.txt
-      - models/mlflow_run_metadata.json
     params:
       - mlops_rakuten/config/config.yml:
           - model_evaluation

@@ -44,4 +44,11 @@ def predict(payload: PredictionRequest) -> PredictionResponse:
 
 @app.get("/info")
 def model_info() -> Dict[str, Any]:
-    return {"status": "Work in progress", "message": "Use MLFlow to get model metrics"}
+    """Affiche les infos du modèle en production"""
+    pipe = PredictionPipeline()
+    info = pipe.get_model_info()
+    
+    if info:
+        return {"status": "ok", "model": info}
+    else:
+        return {"status": "error", "message": "Pas de modèle en production"}

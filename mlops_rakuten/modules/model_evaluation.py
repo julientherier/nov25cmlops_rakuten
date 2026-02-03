@@ -155,7 +155,7 @@ class ModelEvaluation:
                         mlflow.log_artifact(str(cfg.metrics_path))
                         mlflow.log_artifact(str(cfg.classification_report_path))
                         
-                        logger.success("Métriques loggées dans le {train_run_id}")
+                        logger.success(f"Métriques loggées dans le run {train_run_id}")
                 except Exception as e:
                     logger.warning(f"Impossible de continuer le run: {e}")
                     self._log_eval_in_new_run(val_accuracy, val_f1_macro, val_f1_weighted, cfg)
@@ -208,9 +208,9 @@ class ModelEvaluation:
                 mlflow.log_artifact(str(cfg.metrics_path))
                 mlflow.log_artifact(str(cfg.classification_report_path))
                 
-                logger.success("✓ Métriques loggées dans un nouvel experiment")
+                logger.success("Métriques loggées dans un nouvel experiment")
         except Exception as e:
-            logger.warning(f"⚠ Impossible de logger: {e}")
+            logger.warning(f"Impossible de logger: {e}")
 
     def _manage_alias_promotion(self, val_f1_macro: float) -> None:
         """
@@ -317,7 +317,7 @@ class ModelEvaluation:
             if f1_improvement >= self.F1_THRESHOLD_IMPROVEMENT:
                 logger.info(
                     f"Amélioration détectée (+{f1_improvement:.4f})\n"
-                    f"  → Promotion v{pending_version_num} → alias 'production'"
+                    f"Promotion v{pending_version_num} : alias 'production'"
                 )
 
                 try:
@@ -327,7 +327,7 @@ class ModelEvaluation:
                         alias="production",
                         version=str(pending_version_num)
                     )
-                    logger.success(f"v{pending_version_num} → alias 'production'")
+                    logger.success(f"v{pending_version_num} : alias 'production'")
 
                     # Supprimer l'alias "pending" pour éviter les confusions
                     try:
@@ -345,7 +345,7 @@ class ModelEvaluation:
                             alias="archived",
                             version=str(production_version_num)
                         )
-                        logger.success(f"v{production_version_num} → alias 'archived'")
+                        logger.success(f"v{production_version_num} : alias 'archived'")
                     except Exception as e:
                         logger.warning(f"Impossible d'ajouter alias 'archived' à v{production_version_num}: {e}")
                 except mlflow.exceptions.MlflowException as e:
