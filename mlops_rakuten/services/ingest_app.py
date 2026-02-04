@@ -17,50 +17,12 @@ DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
 from mlops_rakuten.pipelines.data_seeding import DataSeedingPipeline
 from mlops_rakuten.utils import create_directories
+from mlops_rakuten.docker_utils import dvc_operation, sync_ingest_data
 
 app = FastAPI(title="Rakuten Ingest API", version="1.0.0")
 
 # Initialisation du client Docker
 docker_client = docker.from_env()
-
-# Fonction pour exécuter des commandes DVC dans le conteneur dédié
-def dvc_runner(cmd: str) -> str:
-    """Exécute une commande DVC dans le conteneur DVC dédié et retourne la sortie."""
-    try:
-        container = docker_client.containers.get(DVC_RUNNER_CONTAINER)
-        
-        # Exécute la commande
-        exit_code, output = container.exec_run(
-            f"bash -c 'cd /app && {cmd}'",
-            stream=False  # Attends la fin
-        )
-        
-        output_str = output.decode('utf-8')
-        for line in output_str.split('\n'):
-            if not line.strip():
-                continue
-            if 'ERROR' in line:
-                logger.error(line)
-            elif 'SUCCESS' in line:
-                logger.success(line)
-            elif 'WARNING' in line:
-                logger.warning(line)
-            else:
-                logger.info(line)
-        
-        if exit_code != 0:
-            raise RuntimeError(f"DVC echoue avec code de sortie {exit_code}")
-        
-        logger.info(f"{cmd} terminé avec succès")
-        return output_str
-    
-    except docker.errors.NotFound:
-        logger.error(f"Container {DVC_RUNNER_CONTAINER} non trouvé")
-        raise HTTPException(status_code=503, detail="DVC runner non disponible")
-    except Exception as e:
-        logger.error(f"Docker error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/health")
 def health() -> Dict[str, str]:
@@ -69,6 +31,9 @@ def health() -> Dict[str, str]:
 
 @app.post("/ingest")
 async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
+    """
+    Ingest CSV + Track with DVC + Sync to Git+DagsHub.
+    """
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(
             status_code=400, detail="Le fichier doit être un .csv")
@@ -80,48 +45,98 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
         shutil.copyfileobj(file.file, f)
 
     try:
+        logger.info(f"Ingesting CSV from {uploads_path}...")
         ingested_dataset_path = DataIngestionPipeline().run(uploaded_csv_path=uploads_path)
+        logger.info(f"Ingestion completed: {ingested_dataset_path}")
     except Exception as e:
+        logger.error(f"Ingestion failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Ingestion failed: {e}"
         ) from e
-
-    return {"status": "ingested", "dataset_path": str(ingested_dataset_path)}
+    
+    # ============================================================================
+    # NEW: Synchroniser avec Git+DVC+DagsHub
+    # ============================================================================
+    try:
+        logger.info("Starting Git+DVC synchronization...")
+        
+        # DVC operations
+        dvc_operation("dvc add data/interim/rakuten_train.csv")
+        
+        # Git+DVC sync (handles commit + push)
+        sync_results = sync_ingest_data(file.filename)
+        
+        if not sync_results["summary"]["success"]:
+            logger.error(f"Sync had errors: {sync_results['errors']}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Git+DVC sync failed: {sync_results['errors']}"
+            )
+        
+        logger.success("Git+DVC synchronization complete!")
+        
+        return {
+            "status": "ingested_and_synced",
+            "dataset_path": str(ingested_dataset_path),
+            "message": "Dataset ingéré, tracké et synchro avec Git+DVC+DagsHub ✓",
+            "sync_details": sync_results["summary"]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Sync operation failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Git+DVC operation failed: {str(e)}"
+        ) from e
 
 
 @app.post("/init")
 def init_dataset() -> Dict[str, Any]:
     """
-    Initialise le dataset.
-    Déclenche le seeding DVC et tracke le dataset résultat du stage seeding.
+    Initialise le dataset + Track + Sync with Git+DagsHub.
     """
     try:
         logger.info("Initialisation du dataset rakuten via le seeding")
         
-        # Pull les données brutes nécessaires, possible grace au remote DVC/Dagshub et au pointeur .dvc
+        # Pull les données brutes
         logger.info("Pulling raw data...")
-        dvc_runner("dvc pull 2>&1 || true")
+        dvc_operation("dvc pull 2>&1 || true")
         
         # Exécute la stage seed
         logger.info("Running seed stage...")
-        dvc_runner("dvc repro seed")
+        dvc_operation("dvc repro seed")
 
-        # Track de rakuten_train.csv, il faut ajouter ce fichier sur le host pour qu'il soit tracké via git commit et push
+        # Track de rakuten_train.csv avec DVC
         logger.info("Tracking rakuten_train with DVC...")
-        dvc_runner("dvc add data/interim/rakuten_train.csv")
+        dvc_operation("dvc add data/interim/rakuten_train.csv")
         
-        # Push kes changements vers le remote DVC et Dagshub, reste à faire le git commit + git push sur le host
-        logger.info("Pushing to DVC remote...")
-        dvc_runner("dvc push")
+        # ============================================================================
+        # NEW: Git+DVC synchronization
+        # ============================================================================
+        logger.info("Starting Git+DVC synchronization...")
+        
+        sync_results = sync_ingest_data("rakuten_train.csv")
+        
+        if not sync_results["summary"]["success"]:
+            logger.error(f"Sync had errors: {sync_results['errors']}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Git+DVC sync failed: {sync_results['errors']}"
+            )
+        
+        logger.success("Git+DVC synchronization complete!")
+        
+        return {
+            "status": "initialisation_complete",
+            "message": "Seed CSV ingéré, tracké et synchro avec Git+DVC+DagsHub ✓",
+            "sync_details": sync_results["summary"]
+        }
     
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return {
-        "status": "initialisation",
-        "message": "Seed CSV ingéré et tracké avec succès."
-    }
+        raise HTTPException(status_code=500, detail=str(e)) from e

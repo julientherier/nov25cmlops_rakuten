@@ -22,6 +22,7 @@ SVC_PREDICT := api-predict
 SVC_TRAIN   := api-train
 SVC_INGEST  := api-ingest
 SVC_DVC	 := dvc-runner
+SVC_GIT	 := git-runner
 
 #################################################################################
 # PYTHON (LOCAL)
@@ -95,7 +96,7 @@ docker-build:
 ## Start the full stack (nginx + gateway + services)
 .PHONY: docker-up
 docker-up:
-	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST) $(SVC_DVC)
+	$(COMPOSE_CMD) up -d --build $(SVC_NGINX) $(SVC_GATEWAY) $(SVC_PREDICT) $(SVC_TRAIN) $(SVC_INGEST) $(SVC_DVC) $(SVC_GIT)
 
 ## Stop everything (keep volumes)
 .PHONY: docker-down

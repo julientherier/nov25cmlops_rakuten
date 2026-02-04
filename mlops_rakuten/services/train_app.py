@@ -63,8 +63,8 @@ def train() -> Dict[str, Any]:
         logger.info("Starting Pipeline...")
 
         # Pull latest data and code from DagsHub
-        logger.info("Pulling from DVC remote...")
-        dvc_runner("dvc pull 2>&1 || true")
+        #logger.info("Pulling from DVC remote...")
+        #dvc_runner("dvc pull")
         
         #DVC repro exécute tous les stages depuis le preprocess, si rakuten train a changé, tout sera relancé depuis le preprocess
         logger.info("Running DVC pipeline...")

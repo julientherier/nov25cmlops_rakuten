@@ -1,6 +1,6 @@
 [core]
     remote = origin
-    autostage = false
+    autostage = true
     check_update = false
 ['remote "origin"']
     url = s3://dvc
