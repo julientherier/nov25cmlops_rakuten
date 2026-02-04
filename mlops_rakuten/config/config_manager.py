@@ -186,6 +186,10 @@ class ConfigurationManager:
 
         X_train_path = latest_transformation_dir / c["X_train_filename"]
         y_train_path = latest_transformation_dir / c["y_train_filename"]
+        data_transform_cfg = self.get_data_transformation_config()
+        vectorizer_path = data_transform_cfg.vectorizer_path
+        label_encoder_path = data_transform_cfg.label_encoder_path
+        class_mapping_path = data_transform_cfg.class_mapping_path
 
         # Créer le répertoire dans modèle
         model_dir = MODELS_DIR 
@@ -194,7 +198,11 @@ class ConfigurationManager:
 
         logger.debug(f"X_train_path resolved to: {X_train_path}")
         logger.debug(f"y_train_path resolved to: {y_train_path}")
+        logger.debug(f"vectorizer_path resolved to: {vectorizer_path}")
+        logger.debug(f"label_encoder_path resolved to: {label_encoder_path}")
+        logger.debug(f"class_mapping_path resolved to: {class_mapping_path}")
         logger.debug(f"model_path resolved to: {model_path}")
+        logger.debug(f"model_dir resolved to: {model_dir}")
 
         return ModelTrainerConfig(
             model_path=model_path,
@@ -202,6 +210,9 @@ class ConfigurationManager:
             X_train_path=X_train_path,
             y_train_path=y_train_path,
             model_type=c["model_type"],
+            vectorizer_path=vectorizer_path,
+            label_encoder_path=label_encoder_path,
+            class_mapping_path=class_mapping_path,
             C=c["C"],
             max_iter=c["max_iter"],
             use_class_weight=c["use_class_weight"],

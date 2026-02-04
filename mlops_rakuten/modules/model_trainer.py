@@ -31,7 +31,7 @@ class ModelTrainer:
         - un rapport texte de classification sur le train
     """
 
-    MODEL_REGISTRY_NAME = "rakuten_text_classifier_tfidf"
+    MODEL_REGISTRY_NAME = "text_classifier_tfidf_m"
 
     def __init__(self, config: ModelTrainerConfig) -> None:
         self.config = config
@@ -100,7 +100,7 @@ class ModelTrainer:
         logger.info("Démarrage de l'étape ModelTrainer")
         
         # Nom de l'expérience MLflow
-        mlflow.set_experiment("train_rakuten_model")
+        mlflow.set_experiment("train_rakuten_model_mlflow")
         
         with mlflow.start_run():
             cfg = self.config
@@ -151,6 +151,19 @@ class ModelTrainer:
             logger.info(f"Sauvegarde du modèle vers : {cfg.model_path}")
             with open(cfg.model_path, "wb") as f:
                 pickle.dump(model, f)
+
+            # Log artifact du vectorizer et label encoder 
+            logger.info("Logging des artifacts (vectorizer, label_encoder, categories) dans MLflow...")
+            
+            # Log vectorizer
+            mlflow.log_artifact(str(cfg.vectorizer_path), artifact_path="preprocessing")
+            # Log label encoder
+            mlflow.log_artifact(str(cfg.label_encoder_path), artifact_path="preprocessing")
+
+            mlflow.log_artifact(str(cfg.class_mapping_path), artifact_path="preprocessing")
+    
+            
+            logger.success("Artifacts loggés dans MLflow")
 
             # Log + Register en une seule étape avec registered_model_name
             logger.info("Logging et enregistrement du modèle dans MLflow...")
@@ -235,7 +248,7 @@ class ModelTrainer:
             run_metadata = {
                 "run_id": run_id,
                 "model_version": str(version),
-                "experiment": "train_rakuten_model",
+                "experiment": "train_rakuten_model_mflow",
             }
             
             run_metadata_path = cfg.model_dir / "mlflow_run_metadata.json"

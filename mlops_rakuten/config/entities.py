@@ -77,6 +77,10 @@ class ModelTrainerConfig:
     X_train_path: Path
     y_train_path: Path
 
+    vectorizer_path: Path
+    label_encoder_path: Path
+    class_mapping_path: Path
+
     model_type: str
 
     C: float
