@@ -1,4 +1,4 @@
-# docker-compose.yml - Rakuten MLOps Full Stack (FIXED VOLUMES)
+# docker-compose.yml - Rakuten MLOps Full Stack (WITH SSH)
 # 
 # Usage:
 #   docker-compose up -d              # Start all services
@@ -51,6 +51,7 @@ services:
       - ./dvc.lock:/app/dvc.lock
       - /var/run/docker.sock:/var/run/docker.sock
       - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
+      - ~/.ssh:/root/.ssh               # ✅ SSH keys for Git push
     networks: [rakuten-net]
     restart: unless-stopped
     healthcheck:
@@ -85,6 +86,7 @@ services:
       - ./dvc.lock:/app/dvc.lock
       - /var/run/docker.sock:/var/run/docker.sock
       - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
+      - ~/.ssh:/root/.ssh              # ✅ SSH keys for Git push
     networks: [rakuten-net]
     restart: unless-stopped
     healthcheck:
@@ -151,6 +153,7 @@ services:
       - .:/app                              # ✅ Code + Data + Config
       - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.ssh:/root/.ssh              # ✅ SSH keys for Git push
     networks: [rakuten-net]
     restart: "no"
     environment:
@@ -179,6 +182,7 @@ services:
       - .:/app                            
       - rakuten_dvc_cache:/app/.dvc/cache   
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.ssh:/root/.ssh              # ✅ SSH keys for Git push
     networks: [rakuten-net]
     restart: "no"
     environment:
@@ -248,7 +252,6 @@ services:
 # ============================================================================
 
 volumes:
-
   rakuten_models:
     name: rakuten_models
   rakuten_reports:

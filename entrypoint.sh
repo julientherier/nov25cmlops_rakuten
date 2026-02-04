@@ -20,29 +20,25 @@ fi
 git config --global core.fileMode false
 git config --global init.defaultBranch main
 
-# ============================================================================
-# 2. Git Credentials (HTTPS Token-based Authentication)
+## ============================================================================
+# 2. SSH Configuration for GitHub
 # ============================================================================
 
-# Create .git-credentials file with HTTPS tokens
-touch ~/.git-credentials
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
 
-# Add GitHub credentials (for: git push origin)
-if [ -n "$GITHUB_USER" ] && [ -n "$GITHUB_TOKEN" ]; then
-    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" >> ~/.git-credentials
-    echo "[Git] GitHub token configured"
+if [ -f "/root/.ssh/id_github" ]; then
+    chmod 600 /root/.ssh/id_github
+    echo "[SSH] GitHub SSH key configured"
 fi
 
-# Add DagsHub credentials (for: git operations + dvc)
-if [ -n "$DAGSHUB_USER" ] && [ -n "$DAGSHUB_TOKEN" ]; then
-    echo "https://${DAGSHUB_USER}:${DAGSHUB_TOKEN}@dagshub.com" >> ~/.git-credentials
-    echo "[Git] DagsHub token configured"
-fi
+git config --global url."git@github.com:".insteadOf "https://github.com/"
+echo "[Git] Configured to use SSH for GitHub"
 
-# Set permissions and configure credential helper
-chmod 600 ~/.git-credentials
-git config --global credential.helper store
-git config --global credential.useHttpPath true
+export GIT_SSH_COMMAND="ssh -i /root/.ssh/id_github"
+git config --global core.sshCommand "ssh -i /root/.ssh/id_github"
+echo "[SSH] Git configured to use SSH key"
 
 # ============================================================================
 # 3. DVC Configuration (IMPORTANT!)
