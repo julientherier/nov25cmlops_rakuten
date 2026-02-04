@@ -45,4 +45,7 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
+
+# Allow mounted git repos to work with any user
+RUN git config --global --add safe.directory /app
 CMD ["uvicorn", "mlops_rakuten.services.predict_app:app", "--host", "0.0.0.0", "--port", "8000"]

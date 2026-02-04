@@ -1,9 +1,10 @@
-# docker-compose.yml - Rakuten MLOps Full Stack
+# docker-compose.yml - Rakuten MLOps Full Stack (FIXED VOLUMES)
 # 
 # Usage:
 #   docker-compose up -d              # Start all services
 #   docker-compose logs -f api-train  # View logs
 #   docker-compose exec git-runner bash  # Enter shell
+
 services:
   # ============================================================================
   # API Gateway (Main Entry Point)
@@ -45,11 +46,11 @@ services:
     container_name: rakuten-ingest
     command: ["uvicorn", "mlops_rakuten.services.ingest_app:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
-      - rakuten_data:/app/data
-      - rakuten_uploads:/app/data/raw/uploads
+      - .:/app                              # ✅ Code + Data depuis local
       - rakuten_logs:/app/logs
       - ./dvc.lock:/app/dvc.lock
       - /var/run/docker.sock:/var/run/docker.sock
+      - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
     networks: [rakuten-net]
     restart: unless-stopped
     healthcheck:
@@ -77,14 +78,13 @@ services:
     container_name: rakuten-train
     command: ["uvicorn", "mlops_rakuten.services.train_app:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
-      - rakuten_data:/app/data
-      - rakuten_models:/app/models
-      - rakuten_reports:/app/reports
-      - rakuten_uploads:/app/data/raw/uploads
+      - .:/app                              # ✅ Code + Data depuis local
+      - rakuten_models:/app/models          # ✅ Models persistent
+      - rakuten_reports:/app/reports        # ✅ Reports persistent
       - rakuten_logs:/app/logs
       - ./dvc.lock:/app/dvc.lock
       - /var/run/docker.sock:/var/run/docker.sock
-      - rakuten_dvc_cache:/app/.dvc/cache
+      - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
     networks: [rakuten-net]
     restart: unless-stopped
     healthcheck:
@@ -113,14 +113,13 @@ services:
     container_name: rakuten-predict
     command: ["uvicorn", "mlops_rakuten.services.predict_app:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
-      - rakuten_data:/app/data
-      - rakuten_models:/app/models
-      - rakuten_reports:/app/reports
-      - rakuten_uploads:/app/data/raw/uploads
+      - .:/app                              # ✅ Code depuis local
+      - rakuten_models:/app/models          # ✅ Models (lecture)
+      - rakuten_reports:/app/reports        # ✅ Reports (lecture)
       - rakuten_logs:/app/logs
       - ./dvc.lock:/app/dvc.lock
       - /var/run/docker.sock:/var/run/docker.sock
-      - rakuten_dvc_cache:/app/.dvc/cache
+      - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
     networks: [rakuten-net]
     restart: unless-stopped
     healthcheck:
@@ -149,14 +148,8 @@ services:
     working_dir: /app
     command: ["sleep", "infinity"]  # Keep running for manual execution
     volumes:
-      - .:/app
-      - rakuten_data:/app/data
-      - rakuten_models:/app/models
-      - rakuten_reports:/app/reports
-      - ./dvc.lock:/app/dvc.lock
-      - ./dvc.yaml:/app/dvc.yaml:ro
-      - rakuten_dvc_cache:/app/.dvc/cache
-      - ./.dvc/config:/app/.dvc/config
+      - .:/app                              # ✅ Code + Data + Config
+      - rakuten_dvc_cache:/app/.dvc/cache   # ✅ Cache DVC persistent
       - /var/run/docker.sock:/var/run/docker.sock
     networks: [rakuten-net]
     restart: "no"
@@ -183,9 +176,8 @@ services:
     working_dir: /app
     command: ["/bin/bash"]  # Interactive shell for git operations
     volumes:
-      - .:/app
-      - rakuten_dvc_cache:/app/.dvc/cache
-      - ./dvc.lock:/app/dvc.lock
+      - .:/app                            
+      - rakuten_dvc_cache:/app/.dvc/cache   
       - /var/run/docker.sock:/var/run/docker.sock
     networks: [rakuten-net]
     restart: "no"
@@ -256,15 +248,12 @@ services:
 # ============================================================================
 
 volumes:
-  rakuten_data:
-    name: rakuten_data
+
   rakuten_models:
     name: rakuten_models
   rakuten_reports:
     name: rakuten_reports
-  rakuten_uploads:
-    name: rakuten_uploads
-  rakuten_dvc_cache:
+  rakuten_dvc_cache:      
     name: rakuten_dvc_cache
   rakuten_logs:
     name: rakuten_logs
