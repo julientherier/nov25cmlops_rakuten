@@ -1,0 +1,156 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/api-service/Dockerfile
+    container_name: rakuten-gateway
+    volumes:
+      - rakuten_logs:/app/logs
+    command: ["uvicorn", "mlops_rakuten.services.gateway_app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks: [rakuten-net]
+    restart: unless-stopped
+    depends_on:
+      api-predict:
+        condition: service_healthy
+      api-ingest:
+        condition: service_healthy
+      api-train:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api-ingest:
+    build:
+      context: .
+      dockerfile: docker/api-service/Dockerfile
+    container_name: rakuten-ingest
+    volumes:
+      - rakuten_data:/app/data
+      - rakuten_uploads:/app/data/raw/uploads
+      - rakuten_logs:/app/logs
+    command: ["uvicorn", "mlops_rakuten.services.ingest_app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks: [rakuten-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api-train:
+    build:
+      context: .
+      dockerfile: docker/api-service/Dockerfile
+    container_name: rakuten-train
+    volumes:
+      - rakuten_data:/app/data
+      - rakuten_models:/app/models
+      - rakuten_reports:/app/reports
+      - rakuten_uploads:/app/data/raw/uploads
+      - rakuten_logs:/app/logs
+    command: ["uvicorn", "mlops_rakuten.services.train_app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks: [rakuten-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  api-predict:
+    build:
+      context: .
+      dockerfile: docker/api-service/Dockerfile
+    container_name: rakuten-predict
+    volumes:
+      - rakuten_data:/app/data
+      - rakuten_models:/app/models
+      - rakuten_reports:/app/reports
+      - rakuten_uploads:/app/data/raw/uploads
+      - rakuten_logs:/app/logs
+    command: ["uvicorn", "mlops_rakuten.services.predict_app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks: [rakuten-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: rakuten-nginx
+    depends_on:
+      gateway:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployments/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deployments/certs:/etc/nginx/certs:ro
+    networks:
+      - rakuten-net
+    restart: unless-stopped
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: rakuten-nginx-exporter
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    environment:
+      SCRAPE_URI: http://nginx/nginx_status
+    networks:
+      - rakuten-net
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rakuten-prometheus-server
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - rakuten_prometheus_data:/prometheus
+    depends_on:
+      - nginx_exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rakuten-grafana-dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - rakuten_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+
+volumes:
+  rakuten_data:
+    name: rakuten_data
+  rakuten_models:
+    name: rakuten_models
+  rakuten_reports:
+    name: rakuten_reports
+  rakuten_uploads:
+    name: rakuten_uploads
+  rakuten_logs:
+    name: rakuten_logs
+  rakuten_prometheus_data:
+    name: rakuten_prometheus_data
+  rakuten_grafana_data:
+    name: rakuten_grafana_data
+
+networks:
+  rakuten-net:
+    driver: bridge

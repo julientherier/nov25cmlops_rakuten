@@ -13,11 +13,11 @@ logger.info(f"PROJ_ROOT path is: {PROJ_ROOT}")
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 RAKUTEN_DATA_DIR = RAW_DATA_DIR / "rakuten"
-UPLOADS_DIR = RAW_DATA_DIR / "uploads"
 SEEDS_DATA_DIR = RAKUTEN_DATA_DIR / "seeds"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
+UPLOADS_DATA_DIR = RAW_DATA_DIR / "uploads"
 
 MODELS_DIR = PROJ_ROOT / "models"
 

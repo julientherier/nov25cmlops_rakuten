@@ -60,7 +60,6 @@ class ModelTrainer:
                 C=cfg.C,
                 max_iter=cfg.max_iter,
                 class_weight=class_weight,
-                n_jobs=-1,
             )
 
         raise ValueError(
