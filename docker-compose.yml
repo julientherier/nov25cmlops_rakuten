@@ -103,6 +103,7 @@ services:
       - DAGSHUB_REPO=${DAGSHUB_REPO}
       - DAGSHUB_TOKEN=${DAGSHUB_TOKEN}
       - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_TRACKING_USERNAME=${MLFLOW_TRACKING_USERNAME}
     env_file: .env
 
   # ============================================================================

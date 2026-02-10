@@ -43,6 +43,8 @@ class ModelTrainer:
         dagshub_user = os.getenv("DAGSHUB_USER")
         dagshub_repo = os.getenv("DAGSHUB_REPO")
 
+        mlflow_user = os.getenv("MLFLOW_TRACKING_USERNAME")
+
         if not all([dagshub_token, dagshub_user, dagshub_repo]):
             logger.warning("Variables d'env MLflow manquantes")
             self.mlflow_enabled = False
@@ -53,7 +55,7 @@ class ModelTrainer:
             f"https://dagshub.com/{dagshub_user}/{dagshub_repo}.mlflow"
         )
 
-        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_user
+        os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_user
         os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
         logger.info("MLflow configuré")
