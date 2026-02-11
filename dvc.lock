@@ -215,8 +215,8 @@ stages:
       size: 3145
     - path: mlops_rakuten/modules/model_trainer.py
       hash: md5
-      md5: 93bb739110dba1648bbb900dfdcaa838
-      size: 11298
+      md5: f5d2c037eb61b73da146b9ac44295266
+      size: 11358
     - path: mlops_rakuten/pipelines/model_trainer.py
       hash: md5
       md5: ecec1cd4241eb8632f295818058faf98
@@ -242,7 +242,7 @@ stages:
       size: 82
     - path: models/mlflow_run_metadata.json
       hash: md5
-      md5: 3bfb7db5b06e9320f1b00ac7f1dd5c89
+      md5: 4e53c061eecdb857fc50c33c3d2812ec
       size: 119
     - path: models/model_config.json
       hash: md5
@@ -250,7 +250,7 @@ stages:
       size: 266
     - path: models/text_classifier.pkl
       hash: md5
-      md5: 3539543fbd84cfbdcda5006914402947
+      md5: 303cbfc21fa0cd134eedede0e64309f2
       size: 4321137
   evaluate:
     cmd: python mlops_rakuten/pipelines/model_evaluation.py
@@ -269,11 +269,11 @@ stages:
       size: 992
     - path: models/mlflow_run_metadata.json
       hash: md5
-      md5: 3bfb7db5b06e9320f1b00ac7f1dd5c89
+      md5: 4e53c061eecdb857fc50c33c3d2812ec
       size: 119
     - path: models/text_classifier.pkl
       hash: md5
-      md5: 3539543fbd84cfbdcda5006914402947
+      md5: 303cbfc21fa0cd134eedede0e64309f2
       size: 4321137
     params:
       mlops_rakuten/config/config.yml:
