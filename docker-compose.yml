@@ -165,6 +165,9 @@ services:
       - DAGSHUB_USER=${DAGSHUB_USER}
       - DAGSHUB_REPO=${DAGSHUB_REPO}
       - DAGSHUB_TOKEN=${DAGSHUB_TOKEN}
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}           # 🔥 AJOUTER
+      - MLFLOW_TRACKING_USERNAME=${MLFLOW_TRACKING_USERNAME} # 🔥 AJOUTER
+      - MLFLOW_TRACKING_PASSWORD=${DAGSHUB_TOKEN}            # 🔥 AJOUTER
     env_file: .env
     stdin_open: true
     tty: true
@@ -203,6 +206,7 @@ services:
   # ============================================================================
   nginx:
     image: nginx:1.25-alpine
+    #image: nginx:alpine
     container_name: rakuten-nginx
     depends_on:
       gateway:
