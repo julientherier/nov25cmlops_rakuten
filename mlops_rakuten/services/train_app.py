@@ -73,6 +73,8 @@ def git_runner(cmd: str) -> str:
                 logger.info(line)
         
         if exit_code != 0:
+            if exit_code == 1 and "nothing to commit" in output_str:  # Traiter exit code 1 + "nothing to commit" comme un succès silencieux :
+                return output_str  # Pas une erreur
             raise RuntimeError(f"Git failed with exit code {exit_code}")
         
         logger.info(f"{cmd} completed successfully")
@@ -110,7 +112,22 @@ def sync_training_results() -> Dict[str, Any]:
         # Step 3: Commit
         logger.info("[Sync] Step 3: Committing with message...")
         commit_msg = "training: Model training pipeline complete"
-        git_runner(f'git commit -m "{commit_msg}"')
+        commit_output = git_runner(f'git commit -m "{commit_msg}"')
+        
+        nothing_to_commit = any(
+            msg in commit_output
+            for msg in ["nothing to commit", "nothing added to commit"]
+        )
+
+        if nothing_to_commit:
+            logger.info("[Sync] Nothing new to commit (dvc.lock unchanged) — skipping git push")
+            return {
+                "status": "synced",
+                "dvc_push": "✓",
+                "git_commit": "skipped (nothing to commit)",
+                "git_push": "skipped (no new commit)"
+            }
+
         
         # Step 4: Push to GitHub
         logger.info("[Sync] Step 4: Pushing to GitHub...")
