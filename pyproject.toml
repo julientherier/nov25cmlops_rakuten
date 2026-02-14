@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "mlops_rakuten"
-version = "0.0.1"
+version = "0.2.0"
 description = "Product type classification for Rakuten France"
 authors = [
   { name = "C. Fabre J. Therier S. Beau" },
@@ -17,15 +17,34 @@ classifiers = [
 ]
 requires-python = "~=3.12.0"
 dependencies = [
-    "dotenv>=0.9.9",
-    "fastapi>=0.124.2",
-    "jose>=1.0.0",
-    "passlib>=1.7.4",
-    "python-box>=7.3.2",
-    "python-jose[cryptography]>=3.5.0",
-    "python-multipart>=0.0.20",
-    "pyyaml>=6.0.3",
-    "uvicorn>=0.38.0",
+  # Env
+  "python-dotenv>=1.0.1",
+
+  # API
+  "fastapi>=0.124.2",
+  "uvicorn>=0.38.0",
+  "python-multipart>=0.0.20",
+
+  # Auth / Security
+  "python-jose[cryptography]>=3.5.0",
+  "passlib>=1.7.4",
+
+  # Config
+  "pyyaml>=6.0.3",
+  "python-box>=7.3.2",
+
+  # Data / ML
+  "numpy>=2.0.0",
+  "pandas>=2.2.0",
+  "scikit-learn>=1.5.0",
+
+  # Utils / CLI / logs
+  "loguru>=0.7.2",
+  "tqdm>=4.66.0",
+  "typer>=0.12.0",
+
+  # Monitoring (pour Prometheus/Grafana)
+  "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 
 

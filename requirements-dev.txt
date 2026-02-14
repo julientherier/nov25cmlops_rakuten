@@ -1,0 +1,7 @@
+pytest
+ruff
+ipython
+jupyterlab
+notebook
+matplotlib
+mkdocs

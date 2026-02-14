@@ -1,0 +1,7 @@
+/class_mapping.json
+/X_train_tfidf.npz
+/X_val_tfidf.npz
+/y_train.npy
+/y_val.npy
+/tfidf_vectorizer.pkl
+/label_encoder.pkl

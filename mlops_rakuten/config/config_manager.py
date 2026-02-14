@@ -24,7 +24,7 @@ from mlops_rakuten.config.entities import (
     ModelTrainerConfig,
     PredictionConfig,
 )
-from mlops_rakuten.utils import create_directories, get_latest_run_dir
+from mlops_rakuten.utils import create_directories
 
 
 class ConfigurationManager:
@@ -40,6 +40,7 @@ class ConfigurationManager:
         logger.info(f"Loading configuration from {config_path}")
         with open(config_path, "r") as f:
             self._config = yaml.safe_load(f)
+            
 
     def get_data_seeding_config(self) -> DataSeedingConfig:
         """
@@ -99,8 +100,7 @@ class ConfigurationManager:
 
         input_path = INTERIM_DATA_DIR / c["input_dataset_filename"]
 
-        run_id = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-        output_dir = INTERIM_DATA_DIR / run_id
+        output_dir = INTERIM_DATA_DIR 
         create_directories([output_dir])
         output_path = output_dir / c["output_dataset_filename"]
 
@@ -137,15 +137,13 @@ class ConfigurationManager:
 
         # Trouver le dernier run de preprocessing
         logger.info(f"Recherche du dernier preprocessing dans : {INTERIM_DATA_DIR}")
-        latest_preproc_dir = get_latest_run_dir(INTERIM_DATA_DIR)
+        latest_preproc_dir =INTERIM_DATA_DIR
 
         input_path = latest_preproc_dir / c["input_dataset_filename"]
         if not input_path.exists():
             logger.error(f"Fichier manquant : {input_path}")
             raise FileNotFoundError(f"{input_path} introuvable")
-
-        run_id = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-        output_dir = PROCESSED_DATA_DIR / run_id
+        output_dir = PROCESSED_DATA_DIR 
         create_directories([output_dir])
 
         return DataTransformationConfig(
@@ -184,20 +182,27 @@ class ConfigurationManager:
 
         # Trouver le dernier run de transformation
         logger.info(f"Recherche de la dernière transformation dans : {PROCESSED_DATA_DIR}")
-        latest_transformation_dir = get_latest_run_dir(PROCESSED_DATA_DIR)
+        latest_transformation_dir = PROCESSED_DATA_DIR
 
         X_train_path = latest_transformation_dir / c["X_train_filename"]
         y_train_path = latest_transformation_dir / c["y_train_filename"]
+        data_transform_cfg = self.get_data_transformation_config()
+        vectorizer_path = data_transform_cfg.vectorizer_path
+        label_encoder_path = data_transform_cfg.label_encoder_path
+        class_mapping_path = data_transform_cfg.class_mapping_path
 
         # Créer le répertoire dans modèle
-        run_id = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-        model_dir = MODELS_DIR / run_id
+        model_dir = MODELS_DIR 
         create_directories([model_dir])
         model_path = model_dir / c["model_filename"]
 
         logger.debug(f"X_train_path resolved to: {X_train_path}")
         logger.debug(f"y_train_path resolved to: {y_train_path}")
+        logger.debug(f"vectorizer_path resolved to: {vectorizer_path}")
+        logger.debug(f"label_encoder_path resolved to: {label_encoder_path}")
+        logger.debug(f"class_mapping_path resolved to: {class_mapping_path}")
         logger.debug(f"model_path resolved to: {model_path}")
+        logger.debug(f"model_dir resolved to: {model_dir}")
 
         return ModelTrainerConfig(
             model_path=model_path,
@@ -205,6 +210,9 @@ class ConfigurationManager:
             X_train_path=X_train_path,
             y_train_path=y_train_path,
             model_type=c["model_type"],
+            vectorizer_path=vectorizer_path,
+            label_encoder_path=label_encoder_path,
+            class_mapping_path=class_mapping_path,
             C=c["C"],
             max_iter=c["max_iter"],
             use_class_weight=c["use_class_weight"],
@@ -224,20 +232,19 @@ class ConfigurationManager:
 
         # Trouver le dernier run de transformation
         logger.info(f"Recherche de la dernière transformation dans : {PROCESSED_DATA_DIR}")
-        latest_transformation_dir = get_latest_run_dir(PROCESSED_DATA_DIR)
+        latest_transformation_dir = PROCESSED_DATA_DIR
 
         X_val_path = latest_transformation_dir / c["X_val_filename"]
         y_val_path = latest_transformation_dir / c["y_val_filename"]
 
         # Trouver le dernier modèle
         logger.info(f"Recherche du dernier modèle dans : {MODELS_DIR}")
-        latest_model_dir = get_latest_run_dir(MODELS_DIR)
+        latest_model_dir = MODELS_DIR
 
         model_path = latest_model_dir / c["model_filename"]
 
         # Créer le répertoire dans modèle
-        run_id = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-        metrics_dir = REPORTS_DIR / run_id
+        metrics_dir = REPORTS_DIR 
         create_directories([metrics_dir])
         metrics_path = metrics_dir / c["metrics_filename"]
         classification_report_path = metrics_dir / c["classification_report_filename"]
@@ -274,14 +281,14 @@ class ConfigurationManager:
 
         # Trouver le dernier run de transformation
         logger.info(f"Recherche de la dernière transformation dans : {PROCESSED_DATA_DIR}")
-        latest_transformation_dir = get_latest_run_dir(PROCESSED_DATA_DIR)
+        latest_transformation_dir = PROCESSED_DATA_DIR
 
         vectorizer_path = latest_transformation_dir / c["vectorizer_filename"]
         label_encoder_path = latest_transformation_dir / c["label_encoder_filename"]
 
         # Trouver le dernier modèle
         logger.info(f"Recherche du dernier modèle dans : {MODELS_DIR}")
-        latest_model_dir = get_latest_run_dir(MODELS_DIR)
+        latest_model_dir = MODELS_DIR
 
         model_path = latest_model_dir / c["model_filename"]
 

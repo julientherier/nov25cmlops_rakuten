@@ -25,3 +25,7 @@ class DataPreprocessingPipeline:
 
         logger.success(f"Pipeline DataPreprocessing terminé. Fichier créé : {output_path}")
         return output_path
+
+if __name__ == "__main__":
+    pipeline = DataPreprocessingPipeline()
+    pipeline.run()

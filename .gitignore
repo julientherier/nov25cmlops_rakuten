@@ -1,5 +1,6 @@
 # Data
-/data/
+/data/raw/upload/
+rakuten_batch_*.csv
 
 # Models
 /models/

@@ -25,3 +25,7 @@ class ModelTrainerPipeline:
 
         logger.success(f"Pipeline ModelTrainer terminé. Modèle créé : {model_path}")
         return model_path
+    
+if __name__ == "__main__":
+    pipeline = ModelTrainerPipeline()
+    pipeline.run()

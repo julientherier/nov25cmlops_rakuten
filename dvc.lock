@@ -1,0 +1,299 @@
+schema: '2.0'
+stages:
+  seed:
+    cmd: python mlops_rakuten/pipelines/data_seeding.py
+    deps:
+    - path: data/raw/product_categories.csv
+      hash: md5
+      md5: 1623c8de2d17e200fc3fa76ebebbbc4e
+      size: 631
+    - path: data/raw/rakuten/X_train_update.csv
+      hash: md5
+      md5: c936389910c88bb29bf2c438af3476df
+      size: 54129120
+    - path: data/raw/rakuten/Y_train_CVw08PX.csv
+      hash: md5
+      md5: 52d45c998ddc0c10f05987bb233ff5e7
+      size: 906705
+    - path: mlops_rakuten/config/config.yml
+      hash: md5
+      md5: 85d4df6b2c00e6a114415230c06c702b
+      size: 3145
+    - path: mlops_rakuten/main.py
+      hash: md5
+      md5: 6d3ed9ed0cc155ebd8bc01177720290a
+      size: 3986
+    - path: mlops_rakuten/modules/data_seeding.py
+      hash: md5
+      md5: 1c4daa34f7fe8886514cf091aa6e0ceb
+      size: 4766
+    - path: mlops_rakuten/pipelines/data_seeding.py
+      hash: md5
+      md5: b83b06f5a56b60966d627d3f5e6bf0db
+      size: 871
+    params:
+      mlops_rakuten/config/config.yml:
+        data_seeding:
+          x_train_filename: X_train_update.csv
+          y_train_filename: Y_train_CVw08PX.csv
+          output_full_dataset_filename: rakuten_dataset_full.csv
+          output_remainder_dataset_filename: rakuten_dataset_remainder.csv
+          output_dataset_filename: rakuten_train.csv
+          text_column: designation
+          target_column: prdtypecode
+          batch_size: 1000
+          n_batches: 10
+    outs:
+    - path: data/raw/rakuten/seeds/rakuten_batch_0001.csv
+      hash: md5
+      md5: e6c9cfef46850233ebcf781f4a9e1af8
+      size: 78518
+    - path: data/raw/rakuten/seeds/rakuten_batch_0002.csv
+      hash: md5
+      md5: d08c2ae328a72d2a481b613799256990
+      size: 79245
+    - path: data/raw/rakuten/seeds/rakuten_batch_0003.csv
+      hash: md5
+      md5: 23b564024a8bab4e332d50f983d08510
+      size: 75698
+    - path: data/raw/rakuten/seeds/rakuten_batch_0004.csv
+      hash: md5
+      md5: 5eb6441456e0ecfbcc1b34da2f3c363d
+      size: 78282
+    - path: data/raw/rakuten/seeds/rakuten_batch_0005.csv
+      hash: md5
+      md5: 10773f44a0d5bb7d54ee58b681c704d6
+      size: 76362
+    - path: data/raw/rakuten/seeds/rakuten_batch_0006.csv
+      hash: md5
+      md5: 64f6233bfdd6e55d6ccfd971b3ca1f6b
+      size: 76963
+    - path: data/raw/rakuten/seeds/rakuten_batch_0007.csv
+      hash: md5
+      md5: 318a076594c76f3de9f3d82cab129f9d
+      size: 78236
+    - path: data/raw/rakuten/seeds/rakuten_batch_0008.csv
+      hash: md5
+      md5: 118c64aa32e399f7cc8d3379f2c38c77
+      size: 78615
+    - path: data/raw/rakuten/seeds/rakuten_batch_0009.csv
+      hash: md5
+      md5: f60c5223494b30474ec888e733d86b2c
+      size: 78503
+    - path: data/raw/rakuten/seeds/rakuten_batch_0010.csv
+      hash: md5
+      md5: d7eaba592f4595001f89681d8fe3d5cb
+      size: 79210
+    - path: data/raw/rakuten/seeds/rakuten_dataset_full.csv
+      hash: md5
+      md5: e8ee50889f16cb234a2fbb684e2f3560
+      size: 6562076
+    - path: data/raw/rakuten/seeds/rakuten_dataset_remainder.csv
+      hash: md5
+      md5: dfcb929e3862f855714af8cd33be8ae2
+      size: 5782684
+  preprocess:
+    cmd: python mlops_rakuten/pipelines/data_preprocessing.py
+    deps:
+    - path: data/interim/rakuten_train.csv
+      hash: md5
+      md5: 663e18274f50be70449137098d1eba0c
+      size: 5830602
+    - path: mlops_rakuten/config/config.yml
+      hash: md5
+      md5: 85d4df6b2c00e6a114415230c06c702b
+      size: 3145
+    - path: mlops_rakuten/modules/data_preprocessing.py
+      hash: md5
+      md5: 2beb1cc096fde664caf435decd941aec
+      size: 4519
+    - path: mlops_rakuten/pipelines/data_preprocessing.py
+      hash: md5
+      md5: ffd2b489d24706e6e375452b30759452
+      size: 946
+    params:
+      mlops_rakuten/config/config.yml:
+        data_preprocessing:
+          input_dataset_filename: rakuten_train.csv
+          output_dataset_filename: preprocessed_dataset.csv
+          text_column: designation
+          target_column: prdtypecode
+          drop_na_text: true
+          drop_na_target: true
+          drop_duplicates: true
+          min_char_length: 10
+          max_char_length: 200
+          min_alpha_ratio: 0.2
+    outs:
+    - path: data/interim/preprocessed_dataset.csv
+      hash: md5
+      md5: 753e9b4578baf742fc9ac173d171a410
+      size: 5621977
+  transform:
+    cmd: python mlops_rakuten/pipelines/data_transformation.py
+    deps:
+    - path: data/interim/preprocessed_dataset.csv
+      hash: md5
+      md5: 753e9b4578baf742fc9ac173d171a410
+      size: 5621977
+    - path: mlops_rakuten/config/config.yml
+      hash: md5
+      md5: 85d4df6b2c00e6a114415230c06c702b
+      size: 3145
+    - path: mlops_rakuten/modules/data_transformation.py
+      hash: md5
+      md5: b60ca040d807a9dd591f01896406b17d
+      size: 5214
+    - path: mlops_rakuten/pipelines/data_transformation.py
+      hash: md5
+      md5: 466277e28b413fed75f8f6c5b800686b
+      size: 1052
+    params:
+      mlops_rakuten/config/config.yml:
+        data_transformation:
+          input_dataset_filename: preprocessed_dataset.csv
+          text_column: designation
+          target_column: prdtypecode
+          test_size: 0.2
+          random_state: 42
+          stratify: true
+          max_features: 20000
+          ngram_min: 1
+          ngram_max: 2
+          lowercase: true
+          stop_words: english
+          label_encoder_filename: label_encoder.pkl
+          class_mapping_filename: class_mapping.json
+          vectorizer_filename: tfidf_vectorizer.pkl
+          X_train_filename: X_train_tfidf.npz
+          X_val_filename: X_val_tfidf.npz
+          y_train_filename: y_train.npy
+          y_val_filename: y_val.npy
+    outs:
+    - path: data/processed/X_train_tfidf.npz
+      hash: md5
+      md5: 6d132cee3826168622e962a6ee0c19c4
+      size: 5976838
+    - path: data/processed/X_val_tfidf.npz
+      hash: md5
+      md5: a1de13eab71b1b263fa8a0c5ca2f33f9
+      size: 1449780
+    - path: data/processed/class_mapping.json
+      hash: md5
+      md5: 1e3fc6fa70ee1316c3a22acbd76af9d3
+      size: 362
+    - path: data/processed/label_encoder.pkl
+      hash: md5
+      md5: 6405eda07d7dd577989d8493c3155016
+      size: 458
+    - path: data/processed/tfidf_vectorizer.pkl
+      hash: md5
+      md5: b8327225f1f3d2d640ed8a31cd7623a3
+      size: 778070
+    - path: data/processed/y_train.npy
+      hash: md5
+      md5: a87142ae3b687b4dc66aeb2e887fdfd5
+      size: 479592
+    - path: data/processed/y_val.npy
+      hash: md5
+      md5: d46ef6843ef60b6feded297abe37731a
+      size: 120000
+  train:
+    cmd: python mlops_rakuten/pipelines/model_trainer.py
+    deps:
+    - path: data/processed/X_train_tfidf.npz
+      hash: md5
+      md5: 6d132cee3826168622e962a6ee0c19c4
+      size: 5976838
+    - path: data/processed/y_train.npy
+      hash: md5
+      md5: a87142ae3b687b4dc66aeb2e887fdfd5
+      size: 479592
+    - path: mlops_rakuten/config/config.yml
+      hash: md5
+      md5: 85d4df6b2c00e6a114415230c06c702b
+      size: 3145
+    - path: mlops_rakuten/modules/model_trainer.py
+      hash: md5
+      md5: f5d2c037eb61b73da146b9ac44295266
+      size: 11358
+    - path: mlops_rakuten/pipelines/model_trainer.py
+      hash: md5
+      md5: ecec1cd4241eb8632f295818058faf98
+      size: 888
+    params:
+      mlops_rakuten/config/config.yml:
+        model_trainer:
+          model_filename: text_classifier.pkl
+          X_train_filename: X_train_tfidf.npz
+          y_train_filename: y_train.npy
+          model_type: logistic_regression
+          C: 1.0
+          max_iter: 2000
+          use_class_weight: true
+    outs:
+    - path: models/classification_report_train.txt
+      hash: md5
+      md5: 8c7820d2586c4ba10056da978bf9ae93
+      size: 1676
+    - path: models/metrics_train.json
+      hash: md5
+      md5: 0e9e02c2a689140a35171a5a6abef5cb
+      size: 82
+    - path: models/mlflow_run_metadata.json
+      hash: md5
+      md5: 4e53c061eecdb857fc50c33c3d2812ec
+      size: 119
+    - path: models/model_config.json
+      hash: md5
+      md5: a6696523f42578cd80fe5ae40bd11241
+      size: 266
+    - path: models/text_classifier.pkl
+      hash: md5
+      md5: 303cbfc21fa0cd134eedede0e64309f2
+      size: 4321137
+  evaluate:
+    cmd: python mlops_rakuten/pipelines/model_evaluation.py
+    deps:
+    - path: mlops_rakuten/config/config.yml
+      hash: md5
+      md5: 85d4df6b2c00e6a114415230c06c702b
+      size: 3145
+    - path: mlops_rakuten/modules/model_evaluation.py
+      hash: md5
+      md5: 02bb153c91f49f7cb6ada35166ca5a89
+      size: 19523
+    - path: mlops_rakuten/pipelines/model_evaluation.py
+      hash: md5
+      md5: 16bb02f7ff3009c4b105a33ed8e64eef
+      size: 992
+    - path: models/mlflow_run_metadata.json
+      hash: md5
+      md5: 4e53c061eecdb857fc50c33c3d2812ec
+      size: 119
+    - path: models/text_classifier.pkl
+      hash: md5
+      md5: 303cbfc21fa0cd134eedede0e64309f2
+      size: 4321137
+    params:
+      mlops_rakuten/config/config.yml:
+        model_evaluation:
+          model_filename: text_classifier.pkl
+          X_val_filename: X_val_tfidf.npz
+          y_val_filename: y_val.npy
+          metrics_filename: metrics_val.json
+          classification_report_filename: classification_report_val.txt
+          confusion_matrix_filename: confusion_matrix_val.txt
+    outs:
+    - path: reports/classification_report_val.txt
+      hash: md5
+      md5: 950911a7ca7d7bce03ce23f7fd9dc35f
+      size: 1676
+    - path: reports/confusion_matrix_val.txt
+      hash: md5
+      md5: ff0837b1ddff10640e8cfc88daa97154
+      size: 3780
+    - path: reports/metrics_val.json
+      hash: md5
+      md5: cc2a7e34cd4a54495231a0bb50c07f98
+      size: 118

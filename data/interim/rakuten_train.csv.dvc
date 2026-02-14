@@ -1,0 +1,5 @@
+outs:
+- md5: 663e18274f50be70449137098d1eba0c
+  size: 5830602
+  hash: md5
+  path: rakuten_train.csv
