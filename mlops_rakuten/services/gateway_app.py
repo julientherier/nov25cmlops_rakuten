@@ -62,14 +62,14 @@ async def proxy_ingest(file: UploadFile = File(...), _=Depends(require_admin)) -
 async def proxy_train(_=Depends(require_admin)) -> Any:
     async with httpx.AsyncClient(timeout=3600) as client:
         r = await client.post(f"{TRAIN_URL}/train")
-    if r.status_code >= 800:
+    if r.status_code >= 1200:
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()
 
 
 @app.get("/info")
 async def proxy_info(_=Depends(require_user)):
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         r = await client.get(f"{PREDICT_URL}/info")
     if r.status_code >= 400:
         raise HTTPException(status_code=r.status_code, detail=r.text)
