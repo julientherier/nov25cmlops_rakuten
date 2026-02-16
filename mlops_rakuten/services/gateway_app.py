@@ -41,13 +41,23 @@ async def token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.post("/init")
-async def proxy_init(_=Depends(require_admin)) -> Any:
+async def proxy_init(force: bool = False, _=Depends(require_admin)) -> Any:
     async with httpx.AsyncClient(timeout=600) as client:
-        r = await client.post(f"{INGEST_URL}/init")
+        r  = await client.post(f"{INGEST_URL}/init", params={"force": force})
     if r.status_code >= 400:
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()
 
+@app.get("/status")
+async def proxy_status(_=Depends(require_admin)) -> Any:
+    """
+    Vérifie l'état du pipeline DVC.
+    """
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(f"{INGEST_URL}/status")
+    if r.status_code >= 400:
+        raise HTTPException(status_code=r.status_code, detail=r.text)
+    return r.json()
 
 @app.post("/ingest")
 async def proxy_ingest(file: UploadFile = File(...), _=Depends(require_admin)) -> Any:
@@ -63,7 +73,7 @@ async def proxy_ingest(file: UploadFile = File(...), _=Depends(require_admin)) -
 async def proxy_train(_=Depends(require_admin)) -> Any:
     async with httpx.AsyncClient(timeout=3600) as client:
         r = await client.post(f"{TRAIN_URL}/train")
-    if r.status_code >= 400:
+    if r.status_code >= 800:
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()
 
