@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 from mlops_rakuten.pipelines.prediction import PredictionPipeline
-from datascientest.nov25cmlops_rakuten.mlops_rakuten.services.mod import (
+from mlops_rakuten.services.schemas import (
     CategoryScore,
     PredictionRequest,
     PredictionResponse,

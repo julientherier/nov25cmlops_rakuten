@@ -14,7 +14,7 @@ from mlops_rakuten.auth.auth_simple import (
     require_admin,
     require_user,
 )
-from datascientest.nov25cmlops_rakuten.mlops_rakuten.services.mod import PredictionRequest, PredictionResponse
+from mlops_rakuten.services.schemas import PredictionRequest, PredictionResponse
 
 app = FastAPI(title="Rakuten Gateway", version="1.0.0")
 
