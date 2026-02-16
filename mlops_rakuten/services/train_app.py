@@ -164,38 +164,54 @@ def health() -> Dict[str, str]:
 
 
 @app.post("/train")
+@app.post("/train")
 def train() -> Dict[str, Any]:
     """
-    Execute the full training pipeline:
-    1. DVC repro (run all stages: preprocess → transform → train → evaluate)
-    2. DVC push (push models/metrics to DagsHub S3)
-    3. Git sync (commit + push dvc.lock to GitHub)
+    Execute the full training pipeline.
+    
+    **Simplified workflow (dvc.lock is synchronized after /init or /ingest):**
+    1. dvc checkout (revert to dvc.lock state - SAFE)
+    2. dvc pull (download missing data - no conflicts)
+    3. dvc repro (run all stages: preprocess → transform → train → evaluate)
+       - Only reruns stages that actually changed
+       - Fast! Because dvc.lock was updated by /init or /ingest
+    4. Sync results to Git+DVC
+    
+    **Why is this fast?**
+    - /init or /ingest already ran preprocess and updated dvc.lock
+    - /train only reruns stages that changed since then
+    - No unnecessary preprocess reruns
     """
     try:
         logger.info("=" * 80)
         logger.info("🚀 Starting Training Pipeline...")
         logger.info("=" * 80)
 
-        # Pull latest data and code from DagsHub
-        logger.info("Pulling from DVC remote...")
+        # Step 1: Reset to dvc.lock state (safe path)
+        # Since /init or /ingest already synchronized dvc.lock, this is always safe
+        logger.info("Step 1: Resetting to dvc.lock state...")
+        dvc_runner("dvc checkout")
+        
+        # Step 2: Download missing data (no conflicts expected)
+        logger.info("Step 2: Pulling latest data from DVC remote...")
         dvc_runner("dvc pull")
         
-        # DVC repro exécute tous les stages depuis le preprocess
-        # Si rakuten_train.csv a changé, tout sera relancé depuis le preprocess
-        logger.info("📊 Running DVC pipeline (preprocess → transform → train → evaluate)...")
+        # Step 3: Run DVC pipeline
+        # Only reruns stages that changed since /init or /ingest
+        logger.info("Step 3: Running DVC pipeline (preprocess → transform → train → evaluate)...")
         dvc_runner("dvc repro")
         
-        # Sync results to Git + DVC
-        logger.info("🔄 Syncing training results to Git and DVC...")
+        # Step 4: Sync results
+        logger.info("Step 4: Syncing training results to Git and DVC...")
         sync_results = sync_training_results()
         
-        if sync_results["status"] == "error":
-            logger.error(f"Sync failed: {sync_results['error']}")
+        if not sync_results["summary"]["success"]:
+            logger.error(f"Sync failed: {sync_results['errors']}")
             return {
                 "status": "training_complete_sync_failed",
                 "stages": ["preprocess", "transform", "train", "evaluate"],
-                "message": "Training succeeded but sync failed",
-                "sync_error": sync_results["error"],
+                "message": "Training succeeded but git+dvc sync failed",
+                "sync_errors": sync_results["errors"],
                 "manual_steps": [
                     "1. git add dvc.lock models/ reports/",
                     "2. git commit -m 'training: Model training pipeline complete'",
@@ -204,24 +220,19 @@ def train() -> Dict[str, Any]:
             }
         
         logger.success("=" * 80)
-        logger.success("✅ Training Pipeline Complete!")
+        logger.success("Training Pipeline Complete!")
         logger.success("=" * 80)
         
         return {
             "status": "complete",
-            "stages": ["preprocess", "transform", "train", "evaluate"],
-            "message": "All stages executed and synced successfully",
-            "sync": sync_results,
-            "details": {
-                "dvc_push": "Models and metrics pushed to DagsHub",
-                "git_commit": "dvc.lock committed",
-                "git_push": "Changes pushed to GitHub"
-            }
+            "stages": ["transform", "train", "evaluate"],
+            "message": "All stages executed and synced successfully ",
+            "sync_summary": sync_results["summary"],
         }
         
     except RuntimeError as e:
-        logger.error(f"❌ DVC pipeline failed: {e}")
+        logger.error(f"DVC pipeline failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

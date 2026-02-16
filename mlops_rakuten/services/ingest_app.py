@@ -29,35 +29,6 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/status")
-def pipeline_status() -> Dict[str, Any]:
-    """
-    Vérifie l'état actuel du pipeline DVC.
-    
-    **Retourne:**
-    - `status`: "clean" (aucun changement) ou "dirty" (changements détectés)
-    - `details`: Sortie de `dvc status` pour diagnostic
-    """
-    try:
-        logger.info("Checking pipeline status...")
-        result = dvc_operation("dvc status", return_output=True)
-        
-        is_clean = not result.strip()
-        
-        return {
-            "status": "clean" if is_clean else "dirty",
-            "pipeline_state": "All stages up-to-date" if is_clean else "Some stages need update",
-            "dvc_status_output": result if result.strip() else "No changes detected",
-            "timestamp": str(Path.cwd())
-        }
-    except Exception as e:
-        logger.error(f"Status check failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to check pipeline status: {str(e)}"
-        ) from e
-
-
 @app.post("/init")
 def init_dataset(
     force: bool = Query(
@@ -91,6 +62,9 @@ def init_dataset(
         logger.info(f"Running seed stage {mode_label}...")
         seed_cmd = "dvc repro seed --force" if force else "dvc repro seed"
         dvc_operation(seed_cmd)
+
+        logger.info("Updating dvc.lock...")
+        dvc_operation("dvc repro preprocess")
 
         # Track de rakuten_train.csv avec DVC
         logger.info("Tracking rakuten_train with DVC...")
@@ -157,12 +131,12 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
     # Synchroniser avec Git+DVC+DagsHub
     # ============================================================================
     try:
+        logger.info("Updating dvc.lock (running preprocess)...")
+        logger.info("   DVC will detect rakuten_train.csv change and rerun preprocess")
+        dvc_operation("dvc repro preprocess")
         logger.info("Starting Git+DVC synchronization...")
         
-        # DVC operations
-        #dvc_operation("dvc add data/interim/rakuten_train.csv")
-        
-        # Git+DVC sync (handles commit + push)
+        # Git+DVC sync (handles: dvc add + git add + git commit + dvc push + git push)
         sync_results = sync_ingest_data(file.filename)
         
         if not sync_results["summary"]["success"]:
@@ -174,11 +148,17 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
         
         logger.success("Git+DVC synchronization complete!")
         
+        logger.success("Ingestion complete!")
+        
         return {
             "status": "ingested_and_synced",
             "dataset_path": str(ingested_dataset_path),
-            "message": "Dataset ingéré, tracké et synchro avec Git+DVC+DagsHub",
-            "sync_details": sync_results["summary"]
+            "filename": file.filename,
+            "message": "Dataset ingéré, pipeline updaté, synchro Git+DVC ✓",
+            "sync_details": sync_results["summary"],
+            "dvc_lock_status": "Synchronized (preprocess executed)",
+            "train_ready": True,
+            "next_step": "Ready for POST /train"
         }
     
     except HTTPException:
@@ -189,3 +169,13 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
             status_code=500,
             detail=f"Git+DVC operation failed: {str(e)}"
         ) from e
+
+
+
+
+
+
+
+
+
+

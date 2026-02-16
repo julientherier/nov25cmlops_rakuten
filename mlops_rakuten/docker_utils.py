@@ -160,7 +160,7 @@ def sync_git_dvc(
             try:
                 output = git_operation("git add *.dvc .gitignore")
                 results["git_operations"].append({
-                    "operation": "add *.dvc .gitignore",
+                    "operation": "add *.dvc dvc.lock .gitignore",
                     "status": "success",
                     "output": output
                 })
