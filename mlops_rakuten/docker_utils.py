@@ -39,7 +39,7 @@ def dvc_operation(cmd: str) -> str:
             logger.error(f"[DVC] FAILED with exit code {exit_code}")
             raise RuntimeError(f"DVC failed: {output_str}")
         
-        logger.success(f"[DVC] {cmd} ✓")
+        logger.success(f"[DVC] {cmd}")
         return output_str
     
     except docker.errors.NotFound:
@@ -73,7 +73,7 @@ def git_operation(cmd: str) -> str:
             logger.error(f"[Git] FAILED with exit code {exit_code}")
             raise RuntimeError(f"Git failed: {output_str}")
         
-        logger.success(f"[Git] {cmd} ✓")
+        logger.success(f"[Git] {cmd}")
         return output_str
     
     except docker.errors.NotFound:
@@ -183,9 +183,21 @@ def sync_git_dvc(
                 "output": output
             })
         except Exception as e:
-            error_msg = f"Failed to git commit: {str(e)}"
-            logger.error(error_msg)
-            results["errors"].append(error_msg)
+            error_msg = str(e)
+            
+            # Si working tree est clean (nothing to commit), c'est normal, pas une erreur
+            if "nothing to commit" in error_msg.lower() or "working tree clean" in error_msg.lower():
+                logger.info(f"[Sync] No new changes to commit (working tree clean) - skipping")
+                results["git_operations"].append({
+                    "operation": "commit",
+                    "status": "skipped",
+                    "reason": "working tree clean - no changes",
+                    "message": commit_message
+                })
+            else:
+                # Sinon, c'est une vraie erreur
+                logger.error(f"Failed to git commit: {error_msg}")
+                results["errors"].append(f"Failed to git commit: {error_msg}")
         
         # ============================================================================
         # 4. PUSH: DVC push + Git push
@@ -207,21 +219,35 @@ def sync_git_dvc(
                     logger.error(error_msg)
                     results["errors"].append(error_msg)
             
-            # Git push
-            try:
-                # Récupérer la branche courante
-                branch = git_operation("git rev-parse --abbrev-ref HEAD").strip()
-                output = git_operation(f"git push myfork {branch}")
+            # Git push (s'il y a eu un commit)
+            # Vérifier s'il y a un commit à pousser
+            has_commit = any(
+                op.get("operation") == "commit" and op.get("status") == "success"
+                for op in results["git_operations"]
+            )
+            
+            if has_commit:
+                try:
+                    # Récupérer la branche courante
+                    branch = git_operation("git rev-parse --abbrev-ref HEAD").strip()
+                    output = git_operation(f"git push myfork {branch}")
+                    results["git_operations"].append({
+                        "operation": "push",
+                        "branch": branch,
+                        "status": "success",
+                        "output": output
+                    })
+                except Exception as e:
+                    error_msg = f"Failed git push: {str(e)}"
+                    logger.error(error_msg)
+                    results["errors"].append(error_msg)
+            else:
+                logger.info("[Sync] No commits to push (skipping git push)")
                 results["git_operations"].append({
                     "operation": "push",
-                    "branch": branch,
-                    "status": "success",
-                    "output": output
+                    "status": "skipped",
+                    "reason": "no commits to push"
                 })
-            except Exception as e:
-                error_msg = f"Failed git push: {str(e)}"
-                logger.error(error_msg)
-                results["errors"].append(error_msg)
         
         # ============================================================================
         # Summary

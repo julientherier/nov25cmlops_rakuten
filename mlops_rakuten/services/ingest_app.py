@@ -94,7 +94,7 @@ def init_dataset(
 
         # Track de rakuten_train.csv avec DVC
         logger.info("Tracking rakuten_train with DVC...")
-        dvc_operation("dvc add data/interim/rakuten_train.csv")
+        #dvc_operation("dvc add data/interim/rakuten_train.csv")
         
         # ============================================================================
         # Git+DVC synchronization
@@ -145,7 +145,7 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
     try:
         logger.info(f"Ingesting CSV from {uploads_path}...")
         ingested_dataset_path = DataIngestionPipeline().run(uploaded_csv_path=uploads_path)
-        logger.info(f"✓ Ingestion completed: {ingested_dataset_path}")
+        logger.info(f"Ingestion completed: {ingested_dataset_path}")
     except Exception as e:
         logger.error(f"Ingestion failed: {e}")
         raise HTTPException(
@@ -160,7 +160,7 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
         logger.info("Starting Git+DVC synchronization...")
         
         # DVC operations
-        dvc_operation("dvc add data/interim/rakuten_train.csv")
+        #dvc_operation("dvc add data/interim/rakuten_train.csv")
         
         # Git+DVC sync (handles commit + push)
         sync_results = sync_ingest_data(file.filename)
