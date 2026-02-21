@@ -1,14 +1,8 @@
-"""
-git_sync_utils.py - Synchronisation Git+DVC pour les APIs Rakuten
-
-Utilise git-runner pour synchroniser les changements DVC avec Git+DagsHub
-"""
-
 from __future__ import annotations
 from loguru import logger
 from typing import Dict, Any
 import docker
-import subprocess
+
 
 GIT_RUNNER_CONTAINER = "rakuten-git-runner"
 DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
@@ -118,7 +112,7 @@ def sync_git_dvc(
     
     try:
         # ============================================================================
-        # 1. DVC: Tracker les données
+        # DVC: Tracker les données si besoin (ici rakuten_train.csv)
         # ============================================================================
         if dvc_files:
             logger.info(f"[Sync] Step 1: Adding {len(dvc_files)} items to DVC...")
@@ -137,7 +131,7 @@ def sync_git_dvc(
                     results["errors"].append(error_msg)
         
         # ============================================================================
-        # 2. GIT: Stage les fichiers Python + les .dvc files
+        # GIT: Stage les fichiers Python + les .dvc files
         # ============================================================================
         logger.info(f"[Sync] Step 2: Staging files with Git...")
         
@@ -158,7 +152,7 @@ def sync_git_dvc(
         # Ensuite, stage les .dvc files et .gitignore
         if dvc_files:
             try:
-                output = git_operation("git add *.dvc .gitignore")
+                output = git_operation("git add *.dvc dvc.lock .gitignore")
                 results["git_operations"].append({
                     "operation": "add *.dvc dvc.lock .gitignore",
                     "status": "success",
@@ -170,7 +164,7 @@ def sync_git_dvc(
                 results["errors"].append(error_msg)
         
         # ============================================================================
-        # 3. GIT: Commit
+        # GIT: Commit
         # ============================================================================
         logger.info(f"[Sync] Step 3: Committing with message: {commit_message}")
         
@@ -185,9 +179,9 @@ def sync_git_dvc(
         except Exception as e:
             error_msg = str(e)
             
-            # Si working tree est clean (nothing to commit), c'est normal, pas une erreur
+            # Si working tree est clean (nothing to commit), c'est normal, ce n'est pas une erreur.
             if "nothing to commit" in error_msg.lower() or "working tree clean" in error_msg.lower():
-                logger.info(f"[Sync] No new changes to commit (working tree clean) - skipping")
+                logger.info(f"[Sync] No new changes to commit - skipping")
                 results["git_operations"].append({
                     "operation": "commit",
                     "status": "skipped",
@@ -200,7 +194,7 @@ def sync_git_dvc(
                 results["errors"].append(f"Failed to git commit: {error_msg}")
         
         # ============================================================================
-        # 4. PUSH: DVC push + Git push
+        # GIT: Push + DVC Push
         # ============================================================================
         if push:
             logger.info(f"[Sync] Step 4: Pushing to remotes...")
@@ -306,27 +300,6 @@ def sync_training_results() -> Dict[str, Any]:
     return sync_git_dvc(
         files_to_add=["mlops_rakuten/"],  # Code changes
         commit_message="feat: Model training complete",
-        dvc_files=[
-            "data/processed/",
-            "models/",
-            "reports/"
-        ],
-        push=True
-    )
-
-
-def sync_prediction_results(batch_name: str) -> Dict[str, Any]:
-    """
-    Après les prédictions, synchronise les résultats.
-    
-    Usage dans predict_app.py:
-        sync_prediction_results("batch_2024_01")
-    """
-    logger.info(f"[Predict] Syncing predictions: {batch_name}")
-    
-    return sync_git_dvc(
-        files_to_add=[],
-        commit_message=f"data: Predictions for {batch_name}",
-        dvc_files=["reports/predictions/"],
+        dvc_files=[],
         push=True
     )

@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.svm import LinearSVC
 
 from mlops_rakuten.config.entities import ModelTrainerConfig
-from mlops_rakuten.utils import create_directories
+from mlops_rakuten.utils.utils import create_directories
 import mlflow
 import os
 

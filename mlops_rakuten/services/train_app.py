@@ -5,7 +5,7 @@ from typing import Any, Dict
 from fastapi import FastAPI, HTTPException
 from loguru import logger
 import docker
-from mlops_rakuten.docker_utils import sync_training_results,dvc_operation
+from mlops_rakuten.utils.docker import sync_training_results,dvc_operation
 
 
 app = FastAPI(title="Rakuten Train API", version="1.0.0")

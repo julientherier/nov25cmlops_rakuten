@@ -15,9 +15,8 @@ from mlops_rakuten.config.constants import (
 DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
 
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
-from mlops_rakuten.pipelines.data_seeding import DataSeedingPipeline
-from mlops_rakuten.utils import create_directories
-from mlops_rakuten.docker_utils import dvc_operation, sync_ingest_data
+from mlops_rakuten.utils.utils import create_directories
+from mlops_rakuten.utils.docker import dvc_operation, sync_ingest_data
 
 app = FastAPI(title="Rakuten Ingest API", version="1.0.0")
 
