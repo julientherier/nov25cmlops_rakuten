@@ -205,7 +205,7 @@ api-predict:
 	@curl -s -k -X POST "$(API_URL)/predict" \
 		-H "Authorization: Bearer $(TOKEN)" \
 		-H "Content-Type: application/json" \
-		-d "{\"text\": \"$(TEXT)\", \"top_k\": $(TOPK)}" \
+		-d "{\"designation\": \"$(TEXT)\", \"top_k\": $(TOPK)}" \
 		| python -m json.tool
 
 ## curl : GET /info — infos modèle chargé
