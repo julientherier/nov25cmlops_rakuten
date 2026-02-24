@@ -121,7 +121,7 @@ async def proxy_train(_=Depends(require_admin)) -> Any:
         }
     
     except Exception as e:
-        logger.error(f"❌Erreur pipeline: {e}")
+        logger.error(f"Erreur pipeline: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

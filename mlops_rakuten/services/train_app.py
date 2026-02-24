@@ -7,9 +7,20 @@ from loguru import logger
 import docker
 from mlops_rakuten.utils.docker import sync_training_results,_dvc
 
+import os
+
+EXECUTION_MODE = os.getenv("EXECUTION_MODE", "cli")
+if EXECUTION_MODE == "cli":
+    # subprocess dans le container — pas de dvc/git runner requis
+    from mlops_rakuten.utils.cli import _dvc, sync_training_results
+    logger.info("Transport : subprocess (cli)")
+else:
+    # docker exec vers rakuten-dvc-runner / rakuten-git-runner
+    from mlops_rakuten.utils.docker import _dvc, sync_training_results
+    logger.info("Transport : docker exec (docker-in-docker)")
 
 app = FastAPI(title="Rakuten Train API", version="1.0.0")
-DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
+
 
 # Initialisation du client Docker
 docker_client = docker.from_env()

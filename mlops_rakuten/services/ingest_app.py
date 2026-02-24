@@ -12,20 +12,28 @@ from mlops_rakuten.config.constants import (
     UPLOADS_DATA_DIR,
 )
 
-DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
-
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
 from mlops_rakuten.utils.utils import create_directories
-from mlops_rakuten.utils.docker import _dvc, sync_ingest_data
 
-app = FastAPI(title="Rakuten Ingest API", version="1.0.0")
+import os
+
+EXECUTION_MODE = os.getenv("EXECUTION_MODE", "cli")
+
+if EXECUTION_MODE == "docker":
+    from mlops_rakuten.utils.docker import _dvc, sync_ingest_data
+    logger.info("Transport : docker exec (docker-in-docker)")
+else:
+    from mlops_rakuten.utils.cli import _dvc, sync_ingest_data
+    logger.info("Transport : subprocess (cli)")
+
+app = FastAPI(title="Rakuten Ingest API", version="1.0.0",description=f"Mode d'exécution actuel : **{EXECUTION_MODE}**")
 
 # Initialisation du client Docker
 docker_client = docker.from_env()
 
 @app.get("/health")
 def health() -> Dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "execution_mode": EXECUTION_MODE}
 
 
 @app.post("/init")
