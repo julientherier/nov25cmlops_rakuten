@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import json
 from pathlib import Path
 
 from loguru import logger
@@ -5,119 +8,197 @@ import typer
 
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
 from mlops_rakuten.pipelines.data_preprocessing import DataPreprocessingPipeline
-from mlops_rakuten.pipelines.data_seeding import DataSeedingPipeline
 from mlops_rakuten.pipelines.data_transformation import DataTransformationPipeline
 from mlops_rakuten.pipelines.model_evaluation import ModelEvaluationPipeline
 from mlops_rakuten.pipelines.model_trainer import ModelTrainerPipeline
 from mlops_rakuten.pipelines.prediction import PredictionPipeline
+from mlops_rakuten.utils.cli import (
+    _dvc,               
+    sync_init,
+    sync_ingest_data,
+    sync_training_results,
+)
 
 app = typer.Typer()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers locaux (lecture de fichiers uniquement, pas de transport)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _read_train_metadata(model_dir: Path) -> dict:
+    """Lit mlflow_run_metadata.json → run_id (7 chars) et version."""
+    metadata_path = model_dir / "mlflow_run_metadata.json"
+    if not metadata_path.exists():
+        return {"run_id": "unknown", "version": "?"}
+    with open(metadata_path) as f:
+        data = json.load(f)
+    return {
+        "run_id": data.get("run_id", "unknown")[:7],
+        "version": data.get("model_version", "?"),
+    }
+
+
+def _read_val_f1(metrics_path: Path) -> str:
+    """Lit val_f1_macro depuis le fichier de métriques."""
+    if not metrics_path.exists():
+        return "?"
+    with open(metrics_path) as f:
+        return str(round(json.load(f).get("val_f1_macro", 0), 4))
+
+
 def _run_training_chain() -> tuple[Path, Path, Path, Path]:
     """
-    Exécute la chaîne standard d'entraînement:
-    preprocessing -> transformation -> training -> evaluation
-
-    Retourne:
-      (preprocessed_path, transformed_path, model_path, metrics_path)
+    preprocessing → transformation → training → evaluation.
+    MLflow (tracking, log_model, alias) est géré dans les modules — rien ici.
     """
-    # 1. Prétraitement
-    preprocessing_pipeline = DataPreprocessingPipeline()
-    preprocessing_output_path = preprocessing_pipeline.run()
-    logger.success(f"Dataset prétraité disponible à : {preprocessing_output_path}")
+    preprocessing_output_path = DataPreprocessingPipeline().run()
+    logger.success(f"Dataset prétraité : {preprocessing_output_path}")
 
-    # 2. Transformation
-    transformation_pipeline = DataTransformationPipeline()
-    transformation_output_path = transformation_pipeline.run()
-    logger.success(f"Dataset transformé disponible à : {transformation_output_path}")
+    transformation_output_path = DataTransformationPipeline().run()
+    logger.success(f"Dataset transformé : {transformation_output_path}")
 
-    # 3. Entraînement
-    model_trainer_pipeline = ModelTrainerPipeline()
-    model_path = model_trainer_pipeline.run()
-    logger.success(f"Modèle entraîné disponible à : {model_path}")
+    model_path = ModelTrainerPipeline().run()
+    logger.success(f"Modèle entraîné : {model_path}")
 
-    # 4. Évaluation
-    model_evaluation_pipeline = ModelEvaluationPipeline()
-    metrics_path = model_evaluation_pipeline.run()
-    logger.success(f"Métriques de validation disponibles dans : {metrics_path}")
+    metrics_path = ModelEvaluationPipeline().run()
+    logger.success(f"Métriques : {metrics_path}")
 
-    return (
-        preprocessing_output_path,
-        transformation_output_path,
-        model_path,
-        metrics_path,
+    return preprocessing_output_path, transformation_output_path, model_path, metrics_path
+
+
+def _check_sync(results: dict, step: str) -> None:
+    """Lève une erreur Typer si la sync a échoué."""
+    if not results["summary"]["success"]:
+        logger.error(f"[{step}] Sync failed : {results['errors']}")
+        raise typer.Exit(code=1)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Commands
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.command()
+def init(
+    force: bool = typer.Option(
+        False, "--force", "-f",
+        help="Force la régénération complète (ignore le cache DVC)",
     )
+) -> None:
+    """
+    Initialise le dataset depuis DagsHub via le stage seed DVC.
+
+    Workflow :
+      1. dvc pull         → récupère raw + interim depuis DagsHub S3
+      2. dvc repro seed   → génère data/interim/rakuten_train.csv
+      3. sync_init()      → dvc add + dvc push + git commit CLI:init
+
+    À exécuter une seule fois au démarrage, ou avec --force pour repartir
+    d'un état propre.
+    """
+    mode = "force-rebuild" if force else "normal"
+    logger.info(f"Init dataset [{mode}]")
+
+    _dvc("dvc pull")
+    _dvc("dvc repro seed --force" if force else "dvc repro seed")
+
+    results = sync_init(force=force)
+    _check_sync(results, "init")
+
+    logger.success("Init terminé — prêt pour `ingest` ou `train`.")
 
 
 @app.command()
-def seed():
+def ingest(
+    uploaded_csv_path: str = typer.Argument(..., help="Chemin vers le CSV à ingérer")
+) -> None:
     """
-    Point d'entrée CLI pour construire le dataset prêt pour la modélisation.
-    Enchaîne :
-    - le pipeline de seeding des données
+    Ingère un nouveau batch CSV dans le dataset et synchronise.
+
+    Workflow :
+      1. DataIngestionPipeline  → fusionne le CSV dans rakuten_train.csv
+      2. dvc repro preprocess   → propage le changement, met à jour dvc.lock
+      3. sync_ingest_data()     → dvc add + dvc push + git commit CLI:ingest
+
+    Ne déclenche PAS l'entraînement. Lancer `train` ensuite.
     """
-    logger.info("Lancement du pipeline de seeding des données")
+    csv_path = Path(uploaded_csv_path)
+    if not csv_path.exists():
+        logger.error(f"Fichier introuvable : {csv_path}")
+        raise typer.Exit(code=1)
+    if csv_path.suffix.lower() != ".csv":
+        logger.error("Le fichier doit être un .csv")
+        raise typer.Exit(code=1)
 
-    # Seeding
-    seeding_pipeline = DataSeedingPipeline()
-    seeding_output_path = seeding_pipeline.run()
-    logger.info(f"Dataset initial disponible à : {seeding_output_path}")
+    logger.info(f"Ingestion de {csv_path.name}...")
+    ingested_path = DataIngestionPipeline().run(uploaded_csv_path=csv_path)
+    logger.success(f"Dataset mis à jour : {ingested_path}")
 
-    _run_training_chain()
+    _dvc("dvc repro preprocess")
+
+    results = sync_ingest_data(csv_path.name)
+    _check_sync(results, "ingest")
+
+    logger.success("Ingestion terminée — lancer `train` pour réentraîner.")
 
 
 @app.command()
-def ingest(uploaded_csv_path: str):
+def train() -> None:
     """
-    Point d'entrée CLI pour ingérer et fusionner le nouveau dataset
-    au dataset précédemment utilisé.
-    Enchaîne :
-    - le pipeline d’ingestion des données
-    - le pipeline complet d'entraînement du modèle
+    Réentraîne le modèle sur les données existantes.
+
+    Workflow :
+      1. dvc pull                → récupère raw + interim depuis DagsHub S3
+      2. preprocessing → evaluate (MLflow géré dans ModelTrainer + ModelEvaluation)
+      3. dvc push                → pousse dvc.lock mis à jour
+      4. sync_training_results() → git commit CLI:train avec run_id + f1
+
+    Prérequis : `init` puis au moins un `ingest`.
     """
-    logger.info("Lancement du pipeline complet (ingestion + entraînement)")
+    logger.info("Lancement du pipeline d'entraînement")
 
-    ingestion_pipeline = DataIngestionPipeline()
-    ingestion_output_path = ingestion_pipeline.run(uploaded_csv_path)
-    logger.info(f"Dataset fusionné disponible à : {ingestion_output_path}")
+    _dvc("dvc pull")
 
-    _run_training_chain()
+    _, _, model_path, metrics_path = _run_training_chain()
+
+    _dvc("dvc push")
+
+    meta = _read_train_metadata(model_path.parent)
+    f1 = _read_val_f1(metrics_path)
+
+    results = sync_training_results(
+        model_version=meta["version"],
+        f1=f1,
+        run_id=meta["run_id"],
+    )
+    _check_sync(results, "train")
+
+    logger.success(f"Training terminé — modèle v{meta['version']}, f1={f1}, run_id={meta['run_id']}")
 
 
 @app.command()
-def train():
+def predict(
+    text: str = typer.Argument(..., help="Texte produit à classifier"),
+    top_k: int = typer.Option(10, "--top-k", "-k", help="Nombre de catégories à retourner"),
+) -> None:
     """
-    Point d'entrée CLI pour construire le dataset prêt pour la modélisation.
-    Enchaîne :
-    - le pipeline de prétraitement des données
-    - le pipeline de transformation des données
-    - le pipeline d'entraînement du modèle
-    - le pipeline d'évaluation du modèle
+    Inférence depuis le modèle @production MLflow.
+
+    PredictionPipeline → Prediction._load_artifacts() charge automatiquement
+    modèle + vectorizer + label encoder + mapping depuis MLflow @production.
+    Fallback local si MLflow est indisponible.
+
+    Exemple :
+        python -m mlops_rakuten.main predict "Super aspirateur sans fil" --top-k 3
     """
-    logger.info("Lancement du pipeline d'entraînement du modèle")
-    _run_training_chain()
-
-
-@app.command()
-def predict(text: str, top_k: int = 5):
-    """
-    Effectue une prédiction à partir d'un texte.
-
-    Exemple:
-    python -m mlops_rakuten.dataset predict "Super aspirateur sans fil"
-    """
-    logger.info("Démarrage de l'inférence via CLI")
-
+    logger.info("Chargement des artefacts depuis MLflow (@production)...")
     pipeline = PredictionPipeline()
-    results_per_text = pipeline.run(texts=[text], top_k=top_k)
 
-    results = results_per_text[0]  # un seul texte
+    logger.info(f"Inférence sur : {text!r}")
+    results = pipeline.run(texts=[text], top_k=top_k)[0]
 
-    logger.info(f"Texte : {text}")
     for r in results:
-        pct = r["proba"] * 100
-        logger.success(f"{r['prdtypecode']} - {r['category_name']} : {pct:.1f}%")
+        logger.success(f"  [{r['prdtypecode']}] {r['category_name']} : {r['proba'] * 100:.1f}%")
 
 
 if __name__ == "__main__":

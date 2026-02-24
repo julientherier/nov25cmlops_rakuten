@@ -16,7 +16,7 @@ DVC_RUNNER_CONTAINER = "rakuten-dvc-runner"
 
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
 from mlops_rakuten.utils.utils import create_directories
-from mlops_rakuten.utils.docker import dvc_operation, sync_ingest_data
+from mlops_rakuten.utils.docker import _dvc, sync_ingest_data
 
 app = FastAPI(title="Rakuten Ingest API", version="1.0.0")
 
@@ -55,15 +55,15 @@ def init_dataset(
         
         # Pull les données brutes
         logger.info("Pulling raw data from DVC remote...")
-        dvc_operation("dvc pull 2>&1 || true")
+        _dvc("dvc pull 2>&1 || true")
         
         # Exécute la stage seed
         logger.info(f"Running seed stage {mode_label}...")
         seed_cmd = "dvc repro seed --force" if force else "dvc repro seed"
-        dvc_operation(seed_cmd)
+        _dvc(seed_cmd)
 
         logger.info("Updating dvc.lock...")
-        dvc_operation("dvc repro preprocess")
+        _dvc("dvc repro preprocess")
 
         # Track de rakuten_train.csv avec DVC
         logger.info("Tracking rakuten_train with DVC...")
@@ -132,7 +132,7 @@ async def ingest_csv(file: UploadFile = File(...)) -> Dict[str, Any]:
     try:
         logger.info("Updating dvc.lock (running preprocess)...")
         logger.info("   DVC will detect rakuten_train.csv change and rerun preprocess")
-        dvc_operation("dvc repro preprocess")
+        _dvc("dvc repro preprocess")
         logger.info("Starting Git+DVC synchronization...")
         
         # Git+DVC sync (handles: dvc add + git add + git commit + dvc push + git push)

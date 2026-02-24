@@ -5,7 +5,7 @@ from typing import Any, Dict
 from fastapi import FastAPI, HTTPException
 from loguru import logger
 import docker
-from mlops_rakuten.utils.docker import sync_training_results,dvc_operation
+from mlops_rakuten.utils.docker import sync_training_results,_dvc
 
 
 app = FastAPI(title="Rakuten Train API", version="1.0.0")
@@ -47,16 +47,16 @@ def train() -> Dict[str, Any]:
         # Step 1: Reset to dvc.lock state (safe path)
         # Since /init or /ingest already synchronized dvc.lock, this is always safe
         logger.info("Step 1: Resetting to dvc.lock state...")
-        dvc_operation("dvc checkout")
+        _dvc("dvc checkout")
         
         # Step 2: Download missing data (no conflicts expected)
         logger.info("Step 2: Pulling latest data from DVC remote...")
-        dvc_operation("dvc pull")
+        _dvc("dvc pull")
         
         # Step 3: Run DVC pipeline
         # Only reruns stages that changed since /init or /ingest
         logger.info("Step 3: Running DVC pipeline (preprocess → transform → train → evaluate)...")
-        dvc_operation("dvc repro")
+        _dvc("dvc repro")
         
         # Step 4: Sync results
         logger.info("Step 4: Syncing training results to Git and DVC...")

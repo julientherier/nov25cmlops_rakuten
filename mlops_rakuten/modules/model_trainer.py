@@ -250,7 +250,7 @@ class ModelTrainer:
             run_metadata = {
                 "run_id": run_id,
                 "model_version": str(version),
-                "experiment": "train_rakuten_model_mflow",
+                "experiment": "train_rakuten_model_mlflow",
             }
             
             run_metadata_path = cfg.model_dir / "mlflow_run_metadata.json"
