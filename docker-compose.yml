@@ -68,7 +68,7 @@ services:
       - EXECUTION_MODE=${EXECUTION_MODE:-docker}
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
-      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+      - GIT_SSH_COMMAND=ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes
       - GITHUB_USER=${GITHUB_USER}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - DAGSHUB_USER=${DAGSHUB_USER}
@@ -104,7 +104,7 @@ services:
       - EXECUTION_MODE=${EXECUTION_MODE:-docker}
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
-      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+      - GIT_SSH_COMMAND=ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes
       - GITHUB_USER=${GITHUB_USER}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - DAGSHUB_USER=${DAGSHUB_USER}
@@ -164,7 +164,7 @@ services:
     environment:
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
-      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+      - GIT_SSH_COMMAND=ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes
       - DAGSHUB_USER=${DAGSHUB_USER}
       - DAGSHUB_REPO=${DAGSHUB_REPO}
       - DAGSHUB_TOKEN=${DAGSHUB_TOKEN}
@@ -196,7 +196,7 @@ services:
     environment:
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
-      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+      - GIT_SSH_COMMAND=ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes
       - DAGSHUB_USER=${DAGSHUB_USER}
       - DAGSHUB_REPO=${DAGSHUB_REPO}
       - DAGSHUB_TOKEN=${DAGSHUB_TOKEN}
