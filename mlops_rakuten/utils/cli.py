@@ -85,11 +85,7 @@ def sync_training_results(model_version: str, f1: str, run_id: str) -> dict[str,
         run_git=_git,
         commit_prefix="CLI:train",
         commit_message=f"model v{model_version}, f1_macro={f1}, run_id={run_id}",
-        git_paths=[
-            "dvc.lock",
-            "models/mlflow_run_metadata.json.dvc",
-            ".dvc/",
-        ],
+        git_paths=["mlops_rakuten/"],
         dvc_files=None,
         push=True,
     )
