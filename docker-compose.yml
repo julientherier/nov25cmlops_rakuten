@@ -53,7 +53,7 @@ services:
       - .:/app
       - rakuten_logs:/app/logs
       - rakuten_dvc_cache:/app/.dvc/cache
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/root/.ssh
       # docker.sock monté conditionnellement via la variable — toujours présent
       # mais utilisé seulement si EXECUTION_MODE=docker
       - /var/run/docker.sock:/var/run/docker.sock
@@ -91,7 +91,7 @@ services:
       - rakuten_reports:/app/reports
       - rakuten_logs:/app/logs
       - rakuten_dvc_cache:/app/.dvc/cache
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/root/.ssh
       - /var/run/docker.sock:/var/run/docker.sock # nécessaire en mode docker uniquement pour appeler les containers entre eux.
     networks: [rakuten-net]
     restart: unless-stopped
@@ -158,7 +158,7 @@ services:
       - .:/app
       - rakuten_dvc_cache:/app/.dvc/cache
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/root/.ssh
     networks: [rakuten-net]
     restart: "no"
     environment:
@@ -190,7 +190,7 @@ services:
       - .:/app
       - rakuten_dvc_cache:/app/.dvc/cache
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/root/.ssh
     networks: [rakuten-net]
     restart: "no"
     environment:
