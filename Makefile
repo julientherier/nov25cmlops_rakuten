@@ -85,6 +85,33 @@ dvc-test:
 
 
 #################################################################################
+# CLI version of DVC operations (for debugging, can be used inside containers)
+#################################################################################
+.PHONY: init-dvc
+init-dvc:
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py init
+
+.PHONY: init_force-dvc
+init_force-dvc:
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py init --force
+
+
+#make ingest-dvc CSV=data/uploads/rakuten_batch_008.csv
+.PHONY: ingest-dvc
+ingest-dvc:
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py ingest $(CSV)
+
+.PHONY: train-dvc
+train-dvc:
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py train
+
+
+#make predict-dvc TEXT="Vélo électrique pliable" TOPK=3
+.PHONY: predict-dvc
+predict-dvc:
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py predict $(TEXT) --top-k $(TOPK)
+
+#################################################################################
 # DOCKER COMPOSE
 #################################################################################
 
