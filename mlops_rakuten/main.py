@@ -122,7 +122,7 @@ def ingest(
 def train() -> None:
     logger.info("Lancement du pipeline d'entraînement")
 
-    _dvc("dvc pull data/")
+    _dvc("dvc pull")
     _dvc("dvc repro")
     _dvc("dvc push")
 
