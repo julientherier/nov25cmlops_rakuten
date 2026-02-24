@@ -109,7 +109,7 @@ train-dvc:
 #make predict-dvc TEXT="Vélo électrique pliable" TOPK=3
 .PHONY: predict-dvc
 predict-dvc:
-	$(PYTHON_INTERPRETER) mlops_rakuten/main.py predict $(TEXT) --top-k $(TOPK)
+	$(PYTHON_INTERPRETER) mlops_rakuten/main.py predict "$(TEXT)" --top-k $(TOPK)
 
 #################################################################################
 # DOCKER COMPOSE
