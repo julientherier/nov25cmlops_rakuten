@@ -280,6 +280,15 @@ docker-mode:
 	@docker inspect rakuten-train --format '{{range .Config.Env}}{{println .}}{{end}}' \
 		2>/dev/null | grep EXECUTION_MODE || echo "  api-train:  not running"
 
+
+#################################################################################
+# MLflow UI (Dagshub)
+#################################################################################
+.PHONY: mflow-ui
+mlflow-ui:
+	open https://dagshub.com/shiff-oumi/nov25cmlops_rakuten_dag.mlflow \
+	  2>/dev/null || xdg-open https://dagshub.com/shiff-oumi/nov25cmlops_rakuten_dag.mlflow		
+
 #################################################################################
 # QUICK SMOKE TESTS
 #################################################################################
