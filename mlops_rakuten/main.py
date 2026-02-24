@@ -118,7 +118,7 @@ def ingest(
 
     logger.success("Ingestion terminée — lancer `train` pour réentraîner.")
 
-
+@app.command()
 def train() -> None:
     logger.info("Lancement du pipeline d'entraînement")
 
