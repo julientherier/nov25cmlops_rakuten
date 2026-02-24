@@ -33,8 +33,8 @@ API_URL   ?= https://localhost
 SVC       ?= api-train
 
 # Auth JWT — récupéré automatiquement pour les appels curl
-ADMIN_USER ?= admin
-ADMIN_PASS ?= admin
+ADMIN_USER ?= claudia
+ADMIN_PASS ?= admin456
 TOKEN = $(shell curl -s -k -X POST "$(API_URL)/token" \
 	-d "username=$(ADMIN_USER)&password=$(ADMIN_PASS)" \
 	| python -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
