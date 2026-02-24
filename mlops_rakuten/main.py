@@ -7,10 +7,7 @@ from loguru import logger
 import typer
 
 from mlops_rakuten.pipelines.data_ingestion import DataIngestionPipeline
-from mlops_rakuten.pipelines.data_preprocessing import DataPreprocessingPipeline
-from mlops_rakuten.pipelines.data_transformation import DataTransformationPipeline
-from mlops_rakuten.pipelines.model_evaluation import ModelEvaluationPipeline
-from mlops_rakuten.pipelines.model_trainer import ModelTrainerPipeline
+from mlops_rakuten.config.config_manager import ConfigurationManager
 from mlops_rakuten.pipelines.prediction import PredictionPipeline
 from mlops_rakuten.utils.cli import (
     _dvc,               
@@ -45,26 +42,6 @@ def _read_val_f1(metrics_path: Path) -> str:
         return "?"
     with open(metrics_path) as f:
         return str(round(json.load(f).get("val_f1_macro", 0), 4))
-
-
-def _run_training_chain() -> tuple[Path, Path, Path, Path]:
-    """
-    preprocessing → transformation → training → evaluation.
-    MLflow (tracking, log_model, alias) est géré dans les modules — rien ici.
-    """
-    preprocessing_output_path = DataPreprocessingPipeline().run()
-    logger.success(f"Dataset prétraité : {preprocessing_output_path}")
-
-    transformation_output_path = DataTransformationPipeline().run()
-    logger.success(f"Dataset transformé : {transformation_output_path}")
-
-    model_path = ModelTrainerPipeline().run()
-    logger.success(f"Modèle entraîné : {model_path}")
-
-    metrics_path = ModelEvaluationPipeline().run()
-    logger.success(f"Métriques : {metrics_path}")
-
-    return preprocessing_output_path, transformation_output_path, model_path, metrics_path
 
 
 def _check_sync(results: dict, step: str) -> None:
@@ -142,29 +119,19 @@ def ingest(
     logger.success("Ingestion terminée — lancer `train` pour réentraîner.")
 
 
-@app.command()
 def train() -> None:
-    """
-    Réentraîne le modèle sur les données existantes.
-
-    Workflow :
-      1. dvc pull                → récupère raw + interim depuis DagsHub S3
-      2. preprocessing → evaluate (MLflow géré dans ModelTrainer + ModelEvaluation)
-      3. dvc push                → pousse dvc.lock mis à jour
-      4. sync_training_results() → git commit CLI:train avec run_id + f1
-
-    Prérequis : `init` puis au moins un `ingest`.
-    """
     logger.info("Lancement du pipeline d'entraînement")
 
-    _dvc("dvc pull")
-
-    _, _, model_path, metrics_path = _run_training_chain()
-
+    _dvc("dvc pull data/")
+    _dvc("dvc repro")
     _dvc("dvc push")
 
+    config = ConfigurationManager()
+    model_path   = Path(config.get_model_trainer_config().model_path)
+    metrics_path = Path(config.get_model_evaluation_config().metrics_path)
+
     meta = _read_train_metadata(model_path.parent)
-    f1 = _read_val_f1(metrics_path)
+    f1   = _read_val_f1(metrics_path)
 
     results = sync_training_results(
         model_version=meta["version"],
