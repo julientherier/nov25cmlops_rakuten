@@ -21,8 +21,8 @@ stages:
       size: 3145
     - path: mlops_rakuten/main.py
       hash: md5
-      md5: b970473eb877315bc99f659850e69f8f
-      size: 6230
+      md5: 0922c38a4ecce82afb5d13f8e6fafe06
+      size: 6243
     - path: mlops_rakuten/modules/data_seeding.py
       hash: md5
       md5: d0be90a9f9b08f7e597d26d35666a67e
