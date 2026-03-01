@@ -133,11 +133,7 @@ def train() -> None:
     meta = _read_train_metadata(model_path.parent)
     f1   = _read_val_f1(metrics_path)
 
-    results = sync_training_results(
-        model_version=meta["version"],
-        f1=f1,
-        run_id=meta["run_id"],
-    )
+    results = sync_training_results()
     _check_sync(results, "train")
 
     logger.success(f"Training terminé — modèle v{meta['version']}, f1={f1}, run_id={meta['run_id']}")
