@@ -89,15 +89,15 @@ def sync_git_dvc(
 
         # ── Étape 3 : push ───────────────────────────────────────────────────
         if push:
-            if dvc_files:
-                logger.info("[Sync] dvc push")
-                try:
-                    run_dvc("dvc push")
-                    results["dvc_operations"].append({"operation": "push", "status": "success"})
-                except Exception as e:
-                    msg = f"dvc push failed: {e}"
-                    logger.error(msg)
-                    results["errors"].append(msg)
+            # dvc push toujours — pas seulement si dvc_files
+            logger.info("[Sync] dvc push")
+            try:
+                run_dvc("dvc push")
+                results["dvc_operations"].append({"operation": "push", "status": "success"})
+            except Exception as e:
+                msg = f"dvc push failed: {e}"
+                logger.error(msg)
+                results["errors"].append(msg)
 
             has_commit = any(
                 op.get("operation") == "commit" and op.get("status") == "success"
