@@ -14,7 +14,7 @@ from typing import Any
 import docker
 from loguru import logger
 
-from mlops_rakuten.utils.sync_core import sync_git_dvc
+from mlops_rakuten.utils.sync_core import sync_git_dvc,read_training_artifacts
 
 
 GIT_RUNNER_CONTAINER = "rakuten-git-runner"
@@ -107,38 +107,16 @@ def sync_ingest_data(uploaded_filename: str) -> dict[str, Any]:
     )
 
 
-def _read_train_metadata(model_dir: Path) -> dict:
-    metadata_path = model_dir / "mlflow_run_metadata.json"
-    if not metadata_path.exists():
-        return {"run_id": "unknown", "version": "?"}
-    with open(metadata_path) as f:
-        data = json.load(f)
-    return {
-        "run_id": data.get("run_id", "unknown")[:7],
-        "version": data.get("model_version", "?"),
-    }
-
-def _read_val_f1(metrics_path: Path) -> str:
-    if not metrics_path.exists():
-        return "?"
-    with open(metrics_path) as f:
-        return str(round(json.load(f).get("val_f1_macro", 0), 4))
-
-
-def sync_training_results() -> dict[str, Any]:
-    """Docker-in-Docker : lit les artefacts via config puis sync."""
-    config      = ConfigurationManager()
-    model_dir   = Path(config.get_model_trainer_config().model_dir)
-    metrics_path = Path(config.get_model_evaluation_config().metrics_path)
-
-    meta = _read_train_metadata(model_dir)
-    f1   = _read_val_f1(metrics_path)
+def sync_training_results(mode: str | None = None) -> dict[str, Any]:
+    
+    artifacts = read_training_artifacts()
+    prefix = mode or "Docker-in-Docker"  
 
     return sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
-        commit_prefix="Docker-in-Docker:train",   # DID = Docker-in-Docker
-        commit_message=f"model v{meta['version']}, f1_macro={f1}, run_id={meta['run_id']}",
+        commit_prefix=f"{prefix}:train",
+        commit_message=f"model v{artifacts['version']}, f1_macro={artifacts['f1']}, run_id={artifacts['run_id']}",
         git_paths=["mlops_rakuten/"],
         dvc_files=None,
         push=True,

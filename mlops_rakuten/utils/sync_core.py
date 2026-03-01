@@ -142,3 +142,31 @@ def sync_git_dvc(
         logger.warning(f"[Sync] Terminé avec {results['summary']['total_errors']} erreur(s)")
 
     return results
+
+
+def read_training_artifacts() -> dict:
+    """Lit les artefacts post-training via ConfigurationManager."""
+    from mlops_rakuten.config.config_manager import ConfigurationManager
+    import json
+    from pathlib import Path
+
+    config       = ConfigurationManager()
+    model_dir    = Path(config.get_model_trainer_config().model_dir)
+    metrics_path = Path(config.get_model_evaluation_config().metrics_path)
+
+    metadata_path = model_dir / "mlflow_run_metadata.json"
+    meta = {"run_id": "unknown", "version": "?"}
+    if metadata_path.exists():
+        with open(metadata_path) as f:
+            data = json.load(f)
+        meta = {
+            "run_id": data.get("run_id", "unknown")[:7],
+            "version": data.get("model_version", "?"),
+        }
+
+    f1 = "?"
+    if metrics_path.exists():
+        with open(metrics_path) as f:
+            f1 = str(round(json.load(f).get("val_f1_macro", 0), 4))
+
+    return {"version": meta["version"], "f1": f1, "run_id": meta["run_id"]}

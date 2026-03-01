@@ -13,7 +13,7 @@ from typing import Any
 
 from loguru import logger
 
-from mlops_rakuten.utils.sync_core import sync_git_dvc
+from mlops_rakuten.utils.sync_core import sync_git_dvc,read_training_artifacts
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,20 +69,16 @@ def sync_ingest_data(
     )
 
 
-def sync_training_results(
-    model_version: str,
-    f1: str,
-    run_id: str,
-    mode: str | None = None,
-) -> dict[str, Any]:
-    prefix = mode or "CLI-local"
-    logger.info(f"[Train] Sync post-entraînement [{prefix}]")
+def sync_training_results(mode: str | None = None) -> dict[str, Any]:
+    
+    artifacts = read_training_artifacts()
+    prefix = mode or "CLI-local"  
 
     return sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
         commit_prefix=f"{prefix}:train",
-        commit_message=f"model v{model_version}, f1_macro={f1}, run_id={run_id}",
+        commit_message=f"model v{artifacts['version']}, f1_macro={artifacts['f1']}, run_id={artifacts['run_id']}",
         git_paths=["mlops_rakuten/"],
         dvc_files=None,
         push=True,
