@@ -7,7 +7,7 @@ import os
 EXECUTION_MODE = os.getenv("EXECUTION_MODE", "cli")
 
 if EXECUTION_MODE == "docker":
-    from mlops_rakuten.utils.docker_utils import _dvc, sync_training_results
+    from mlops_rakuten.utils.docker import _dvc, sync_training_results
     SYNC_MODE = None  # docker_utils hardcode "Docker-DID"
     logger.info("Transport : docker exec (Docker-DID)")
 else:
