@@ -76,7 +76,7 @@ def init(
     mode = "force-rebuild" if force else "normal"
     logger.info(f"Init dataset [{mode}]")
 
-    _dvc("dvc pull")
+    _dvc("dvc pull 2>&1 || true")
     _dvc("dvc repro seed --force" if force else "dvc repro seed")
 
     results = sync_init(force=force)
