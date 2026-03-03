@@ -33,7 +33,6 @@ def train() -> Dict[str, Any]:
         logger.info("=" * 60)
         logger.info("Starting Training Pipeline...")
 
-        _dvc("dvc checkout")
         _dvc("dvc pull")
         _dvc("dvc repro")
 
