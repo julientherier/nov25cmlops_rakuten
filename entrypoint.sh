@@ -20,55 +20,44 @@ fi
 git config --global core.fileMode false
 git config --global init.defaultBranch main
 
-## ============================================================================
-# 2. SSH Configuration for GitHub
+# ============================================================================
+# 2. SSH Configuration
 # ============================================================================
 
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+# Pas de chmod — le mount WSL2 est en lecture seule pour les permissions
+# SSH fonctionne en root dans Docker sans vérification stricte des permissions
 
 if [ -f "/root/.ssh/id_github" ]; then
-    chmod 600 /root/.ssh/id_github
-    echo "[SSH] GitHub SSH key configured"
+    export GIT_SSH_COMMAND="ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
+    git config --global core.sshCommand "ssh -i /root/.ssh/id_github -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
+    echo "[SSH] Git configured with id_github"
+else
+    echo "[Warning] /root/.ssh/id_github not found — git push via SSH may fail"
 fi
 
 git config --global url."git@github.com:".insteadOf "https://github.com/"
 echo "[Git] Configured to use SSH for GitHub"
 
-export GIT_SSH_COMMAND="ssh -i /root/.ssh/id_github"
-git config --global core.sshCommand "ssh -i /root/.ssh/id_github"
-echo "[SSH] Git configured to use SSH key"
-
 # ============================================================================
-# 3. DVC Configuration (IMPORTANT!)
+# 3. DVC Configuration
 # ============================================================================
 
 if [ -d "/app/.dvc" ]; then
-    # Enable autostage
     dvc config core.autostage true
     echo "[DVC] autostage enabled"
-    
-    # Show DVC remotes
     echo "[DVC] Configured remotes:"
     dvc remote list || echo "[DVC] No remotes configured"
 else
-    echo "[Warning] .dvc directory not found - DVC may not be initialized"
+    echo "[Warning] .dvc directory not found"
 fi
-
 
 # ============================================================================
 # Ready!
 # ============================================================================
 
-echo "[Setup] ✓ Git + DVC + Docker ready!"
-if [ -n "$GITHUB_USER" ]; then
-    echo "  GitHub:  $GITHUB_USER"
-fi
-if [ -n "$DAGSHUB_USER" ]; then
-    echo "  DagsHub: $DAGSHUB_USER"
-fi
+echo "[Setup] ✓ Git + DVC ready!"
+[ -n "$GITHUB_USER"  ] && echo "  GitHub:  $GITHUB_USER"
+[ -n "$DAGSHUB_USER" ] && echo "  DagsHub: $DAGSHUB_USER"
 echo ""
 
-# Execute the passed command
 exec "$@"
