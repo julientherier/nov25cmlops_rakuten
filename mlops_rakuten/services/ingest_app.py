@@ -43,7 +43,6 @@ def init_dataset(
 
         _dvc("dvc pull 2>&1 || true")
         _dvc("dvc repro seed --force" if force else "dvc repro seed")
-        _dvc("dvc repro preprocess")
 
         sync_results = sync_init(force=force, mode=SYNC_MODE)
 
