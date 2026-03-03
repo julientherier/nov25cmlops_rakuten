@@ -131,7 +131,7 @@ def sync_training_results(mode: str | None = None) -> dict[str, Any]:
         run_git=_git,
         commit_prefix=f"{prefix}:train",
         commit_message=f"model v{version}, f1_macro={f1}, run_id={run_id}",
-        git_paths=["dvc.lock", "models/", "reports/"],
+        git_paths=["mlops_rakuten/"],
         dvc_files=None,
         push=True,
     )
