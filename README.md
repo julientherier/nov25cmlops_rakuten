@@ -29,13 +29,15 @@ Classification de types de produits pour Rakuten France
 Le projet suit une architecture microservices conteneurisée. Le même pipeline de données et d'entraînement est accessible via trois modes d'exécution distincts, selon le contexte (développement, API, automatisation batch).
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│               MODES DE DÉCLENCHEMENT                                 │
-│                                                                      │
-│   Mode 1 — CLI local      make ingest-dvc / train-dvc               │
-│   Mode 2 — API curl       curl / Swagger → nginx → gateway → api-*  │
-│   Mode 3 — Airflow batch  DAG schedulé → subprocess → main.py       │
-└───────────────────────────────┬──────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│               MODES DE DÉCLENCHEMENT                                  │
+│                                                                       │
+│   Mode 1 — CLI local      make init-dvc / make ingest-dvc /(hors api) │
+│   Mode 2 — API curl       curl / Swagger → nginx → gateway → api-*    │
+│            └── EXECUTION_MODE=cli    : subprocess (dans le container) │
+│            └── EXECUTION_MODE=docker : docker-in-docker (DID)         │
+│   Mode 3 — Airflow batch  DAG schedulé → subprocess → main.py         │
+└───────────────────────────────┬───────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -50,30 +52,32 @@ Le projet suit une architecture microservices conteneurisée. Le même pipeline 
 └────────────────────────────┬────────────────────────────────────────┘
                              │ HTTP interne
                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       API GATEWAY (FastAPI)                         │
-│  • Authentification OAuth2 / Bearer Token                           │
-│  • Routage vers les services internes                               │
-└──────┬──────────────────┬──────────────────────┬────────────────────┘
-       │                  │                      │
-       ▼                  ▼                      ▼
-┌────────────┐   ┌────────────────┐   ┌──────────────────┐
-│  Ingest    │   │  Train Service │   │  Predict Service │
-│  Service   │   │                │   │                  │
-│ (FastAPI)  │   │  • Pipeline    │   │  • Chargement    │
-│            │   │    complète    │   │    modèle MLflow │
-│ • Merge    │   │  • MLflow      │   │  • Inférence     │
-│   datasets │   │    tracking    │   │  • Top-K résult. │
-└────────────┘   └───────┬────────┘   └──────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                       API GATEWAY (FastAPI)                                            │
+│  • Authentification OAuth2 / Bearer Token                                              │
+│  • Routage vers les services internes                                                  │
+└──────┬──────────────────┬──────────────────────┬──────────────────┬────────────────────┘
+       │                  │                      │                  │
+       ▼                  ▼                      ▼                  ▼
+┌────────────┐   ┌────────────────┐   ┌──────────────────┐   ┌──────────────────┐
+│  Ingest    │   │  Train Service │   │  Predict Service │   │  Init Service    │
+│  Service   │   │                │   │                  │   │                  │
+│ (FastAPI)  │   │  • Pipeline    │   │  • Chargement    │   │  • Init dataset  │
+│            │   │    complète    │   │    modèle MLflow │   │    seed          │
+│ • Merge    │   │  • MLflow      │   │  • Inférence     │   │  • Reset état    │
+│   datasets │   │    tracking    │   │  • Top-K résult. │   │    pipeline      │
+└─────┬──────┘   └───────┬────────┘   └──────────────────┘   └────────┬─────────┘
+      │                  │                                            │
+      └──────────────────┼────────────────────────────────────────────┘
                          │
               ┌──────────┴──────────┐
               │                     │
               ▼                     ▼
 ┌─────────────────────┐  ┌──────────────────────────────┐
-│  Stockage local     │  │  MLflow + DagsHub             │
-│  (volumes Docker)   │  │  • Tracking expériences       │
-│  • data/            │  │  • Métriques / artefacts      │
-│  • models/          │  │  • DVC remote (données)       │
+│  Stockage local     │  │  MLflow + DagsHub            │
+│  (volumes Docker)   │  │  • Tracking expériences      │
+│  • data/            │  │  • Métriques / artefacts     │
+│  • models/          │  │  • DVC remote (données)      │
 └─────────────────────┘  └──────────────────────────────┘
                                      │
               ┌──────────────────────┤
@@ -88,7 +92,37 @@ Le projet suit une architecture microservices conteneurisée. Le même pipeline 
 
 ## Modes d'exécution
 
-Le projet expose **trois modes d'exécution** qui partagent le même pipeline (`main.py`, `cli.py`) et diffèrent uniquement par leur transport et leur déclencheur.
+Le projet expose **trois modes d'exécution** qui diffèrent par leur déclencheur et leur transport, mais partagent la même logique métier (`_dvc()`, `sync_*()`) via `utils/cli.py` (subprocess) ou `utils/docker.py` (docker exec).
+Le choix du transport est contrôlé par la variable `EXECUTION_MODE`, uniquement pertinente pour le Mode 2.
+```
+                        ┌─────────────────────────────────────────┐
+                        │           Logique partagée              │
+                        │  utils/cli.py                           │
+                        │  utils/docker.py                        │
+                        └────────────┬────────────────────────────┘
+                                     │
+          ┌──────────────────────────┼──────────────────────────┐
+          ▼                          ▼                          ▼
+┌──────────────────┐      ┌──────────────────────┐      ┌──────────────────┐
+│   Mode 1 — CLI   │      │    Mode 2 — API       │      │ Mode 3 — Airflow │
+│                  │      │                       │      │                  │
+│  main.py (typer) │      │  api/train.py         │      │  DAG → subprocess│
+│  init / ingest   │      │  (FastAPI)            │      │  → main.py       │
+│  train / predict │      │  POST /train          │      │                  │
+└──────────────────┘      └──────────┬────────────┘      └──────────────────┘
+  make train-dvc                     │                     automatique
+  terminal / debug                   │                     lundi 3h00
+                         ┌───────────┴───────────┐
+                         ▼                       ▼
+               ┌──────────────────┐   ┌─────────────────────┐
+               │ EXECUTION_MODE   │   │  EXECUTION_MODE     │
+               │     = cli        │   │     = docker        │
+               │                  │   │                     │
+               │ subprocess       │   │ docker exec         │
+               │ → dvc/git        │   │ → dvc-runner        │
+               │   (in container) │   │ → git-runner        │
+               └──────────────────┘   └─────────────────────┘
+```
 
 ### Vue d'ensemble
 
@@ -122,7 +156,7 @@ make train-dvc
 
 Deux sous-modes contrôlés par la variable `EXECUTION_MODE` :
 
-#### EXECUTION_MODE=cli (recommandé)
+#### EXECUTION_MODE=cli
 
 Les services FastAPI (`api-ingest`, `api-train`) exécutent DVC et Git via **subprocess** directement dans leur container. Aucun container supplémentaire.
 
@@ -133,7 +167,7 @@ make docker-up-cli
 
 #### EXECUTION_MODE=docker (docker-in-docker)
 
-Les services FastAPI délèguent DVC et Git à des containers dédiés (`dvc-runner`, `git-runner`) via `docker exec`. Mode pédagogique pour démontrer une architecture microservices avancée.
+Les services FastAPI délèguent DVC et Git à des containers dédiés (`dvc-runner`, `git-runner`) via `docker exec`. Première approche développée, conservée à titre pédagogique pour illustrer une architecture microservices avancée — moins optimal que le mode `cli` en raison du double niveau de conteneurisation.
 
 ```bash
 make docker-up-docker
@@ -160,41 +194,40 @@ make api-predict TEXT="Vélo électrique" TOPK=3
 
 ### Mode 3 — Airflow batch (automatisé)
 
-Airflow orchestre le pipeline complet de façon autonome. Il réutilise le transport CLI (`utils/cli.py`) — même code que le Mode 1, simplement déclenché par un scheduler.
-
-```bash
-make docker-up-batch      # stack CLI + Airflow
-make airflow-trigger      # déclencher manuellement
-make airflow-set-batch N=3
-```
-
-Le DAG `rakuten_batch_pipeline` s'exécute tous les lundis à 3h00 :
-
-```
-check_batch ──► ingest_batch ──► train_model ──► increment_batch
-     │
-     └── no_batch (si CSV introuvable → skip)
-```
+A implementer
 
 ### Commits Git par mode
 
 Chaque mode produit des commits identifiables dans l'historique Git :
-
 ```
 git log --oneline
 
-a3f1c2e  Airflow:train  — model v26, f1_macro=0.7750  ← automatique (Airflow)
-58ee89f  Airflow:ingest — batch=rakuten_batch_0003     ← automatique (Airflow)
-3a2f1c4  CLI:train      — model v25, f1_macro=0.7697  ← manuel (API / CLI)
-9b4e2d1  CLI:ingest     — batch=rakuten_batch_0002     ← manuel (API / CLI)
+a3f1c2e  Airflow:train          — model v26, f1_macro=0.7750  ← automatique (Airflow)
+58ee89f  Airflow:ingest         — batch=rakuten_batch_0003     ← automatique (Airflow)
+3a2f1c4  Docker-in-Docker:train — model v25, f1_macro=0.7697  ← manuel (API / Docker-DID)
+9b4e2d1  Docker-in-Docker:ingest— batch=rakuten_batch_0002     ← manuel (API / Docker-DID)
+3a2f1c4  Docker-CLI:train       — model v25, f1_macro=0.7697  ← manuel (API / CLI)
+9b4e2d1  CLI:ingest             — batch=rakuten_batch_0002     ← manuel (API / CLI)
+3a2f1c4  CLI-local:train        — model v25, f1_macro=0.7697  ← local (main.py / make)
+9b4e2d1  CLI-local:ingest       — batch=rakuten_batch_0002     ← local (main.py / make)
 ```
+
+| Préfixe de commit       | Mode                          | Déclencheur        |
+|-------------------------|-------------------------------|--------------------|
+| `CLI-local:ingest`      | Mode 1 — local                | make / terminal    |
+| `CLI-local:train`       | Mode 1 — local                | make / terminal    |
+| `CLI:ingest`            | Mode 2 — subprocess container | curl / Swagger     |
+| `Docker-CLI:train`      | Mode 2 — subprocess container | curl / Swagger     |
+| `Docker-in-Docker:train`| Mode 2 — docker-in-docker     | curl / Swagger     |
+| `Airflow:ingest`        | Mode 3 — batch                | scheduler / cron   |
+| `Airflow:train`         | Mode 3 — batch                | scheduler / cron   |
 
 ### Résumé des profiles Docker
 
 | Commande Makefile         | Services                               | Usage                      |
 |---------------------------|----------------------------------------|----------------------------|
-| `make docker-up-cli`      | stack de base, EXECUTION_MODE=cli      | Dev / démo API             |
-| `make docker-up-docker`   | stack + runners, EXECUTION_MODE=docker | Démo docker-in-docker      |
+| `make docker-up-cli`      | EXECUTION_MODE=cli                     | API                        |
+| `make docker-up-docker`   | EXECUTION_MODE=docker                  | Démo docker-in-docker      |
 | `make docker-up-batch`    | stack cli + airflow (profile batch)    | Batch automatisé           |
 
 ---
@@ -419,10 +452,8 @@ dvc pull   # ← DagsHub S3
 ```yaml
 # docker-compose.yml
 volumes:
-  - ~/.ssh:/root/.ssh   # clé SSH du développeur montée dans les containers
+  - ~/.ssh:/root/.ssh   # clé SSH montée dans les containers
 ```
-
-L'`entrypoint.sh` configure `GIT_SSH_COMMAND` automatiquement au démarrage — pas de `chmod` sur le mount, compatible WSL2.
 
 ---
 
@@ -553,13 +584,15 @@ pytest tests/test_model_trainer.py      # module spécifique
 | `make airflow-set-batch N=3`  | Configure le prochain batch        |
 | `make airflow-ui`             | Ouvre http://localhost:8082        |
 
-### Environnement local
+### Local
 
-| Commande                  | Description                        |
-|---------------------------|------------------------------------|
-| `make create_environment` | Crée le venv Python avec `uv`      |
-| `make requirements`       | Installe les dépendances           |
-| `make ingest-dvc CSV=<f>` | Ingestion locale (Mode 1)          |
-| `make train-dvc`          | Entraînement local (Mode 1)        |
-| `make fix-permissions`    | Répare `.git/` et `data/`          |
-| `make swagger`            | Ouvre https://localhost/docs       |
+| Commande                  | Description                           |
+|---------------------------|---------------------------------------|
+| `make create_environment` | Crée le venv Python avec `uv`         |
+| `make requirements`       | Installe les dépendances              |
+| `make init-dvc`           | Initialise le dataset seed (Mode 1)   |
+| `make init_force-dvc`     | Réinitialise (force, Mode 1)          |
+| `make ingest-dvc CSV=<f>` | Ingestion locale (Mode 1)             |
+| `make train-dvc`          | Entraînement local (Mode 1)           |
+| `make predict-dvc TEXT=<t> TOPK=<n>` | Prédiction locale (Mode 1) |
+| `make swagger`            | Ouvre https://localhost/docs          |

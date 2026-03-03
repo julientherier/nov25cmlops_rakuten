@@ -113,7 +113,7 @@ dvc-reset:
 
 
 #################################################################################
-# CLI version (for debugging, can be used inside containers or locally			
+# CLI version for debugging, can be used inside containers or locally			
 #################################################################################
 .PHONY: init-dvc
 init-dvc:
