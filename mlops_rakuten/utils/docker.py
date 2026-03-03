@@ -13,6 +13,7 @@ from typing import Any
 
 import docker
 from loguru import logger
+from pathlib import Path
 
 from mlops_rakuten.utils.sync_core import sync_git_dvc,read_training_artifacts
 
@@ -83,20 +84,18 @@ def _git(cmd: str) -> str:
 # Commandes spécialisées — même interface que sync_utils
 # ─────────────────────────────────────────────────────────────────────────────
 
-def sync_ingest_data(uploaded_filename: str) -> dict[str, Any]:
-    """
-    Après une ingestion via API Docker, synchronise rakuten_train.csv.
-
-    Usage dans ingest_app.py :
-        sync_ingest_data("rakuten_batch_0005.csv")
-    """
-    logger.info(f"[Ingest] Sync post-ingestion : {uploaded_filename}")
+def sync_ingest_data(
+    uploaded_filename: str,
+    mode: str | None = None,
+) -> dict[str, Any]:
+    prefix = mode or "Docker-in-Docker"
+    logger.info(f"[Ingest] Sync post-ingestion : {uploaded_filename} [{prefix}]")
 
     return sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
-        commit_prefix="Docker-in-Docker:ingest",
-        commit_message=f"batch={uploaded_filename}",
+        commit_prefix=f"{prefix}:ingest",
+        commit_message=f"batch={Path(uploaded_filename).stem}",
         git_paths=[
             "data/interim/rakuten_train.csv.dvc",
             "dvc.lock",
@@ -122,15 +121,24 @@ def sync_training_results(mode: str | None = None) -> dict[str, Any]:
         push=True,
     )
 
-def sync_init(force: bool = False) -> dict[str, Any]:
-    """Ajoute init manquant pour le mode Docker-in-Docker."""
-    mode = "force-rebuild" if force else "normal"
+def sync_init(
+    force: bool = False,
+    mode: str | None = None,
+) -> dict[str, Any]:
+    prefix = mode or "Docker-in-Docker"
+    label = "force-rebuild" if force else "normal"
+    logger.info(f"[Init] Sync post-seed [{label}] [{prefix}]")
+
     return sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
-        commit_prefix="Docker-in-Docker:init",
-        commit_message=f"seed dataset [{mode}]",
-        git_paths=["data/interim/rakuten_train.csv.dvc", "dvc.lock", ".dvc/"],
+        commit_prefix=f"{prefix}:init",
+        commit_message=f"seed dataset [{label}]",
+        git_paths=[
+            "data/interim/rakuten_train.csv.dvc",
+            "dvc.lock",
+            ".dvc/",
+        ],
         dvc_files=["data/interim/rakuten_train.csv"],
         push=True,
     )
