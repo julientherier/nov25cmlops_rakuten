@@ -97,8 +97,8 @@ stages:
     deps:
     - path: data/interim/rakuten_train.csv
       hash: md5
-      md5: dfcb929e3862f855714af8cd33be8ae2
-      size: 5782684
+      md5: 166a2d36930c6b6d2c800d65edf9a70a
+      size: 5684172
     - path: mlops_rakuten/config/config.yml
       hash: md5
       md5: 85d4df6b2c00e6a114415230c06c702b
@@ -127,8 +127,8 @@ stages:
     outs:
     - path: data/interim/preprocessed_dataset.csv
       hash: md5
-      md5: 6b9e4589892a9a4049401b62efa53c00
-      size: 5410533
+      md5: 2b5427b6d648cf8828ef684a53cdce83
+      size: 5483460
   transform:
     cmd: python mlops_rakuten/pipelines/data_transformation.py
     deps:
