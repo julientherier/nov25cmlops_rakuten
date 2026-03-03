@@ -33,6 +33,8 @@ def train() -> Dict[str, Any]:
         logger.info("=" * 60)
         logger.info("Starting Training Pipeline...")
 
+
+        # ici le true permet de ne pas échouer si il y a deja des elements dans le cache distant, on veut juste s'assurer d'avoir la derniere version avant de lancer le repro et ecraser les changements locaux.
         _dvc("dvc pull 2>&1 || true")
         _dvc("dvc repro")
 
