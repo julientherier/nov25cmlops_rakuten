@@ -74,7 +74,7 @@ def sync_training_results(mode: str | None = None) -> dict[str, Any]:
     artifacts = read_training_artifacts()
     prefix = mode or "CLI-local"  
 
-    return sync_git_dvc(
+    result= sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
         commit_prefix=f"{prefix}:train",
@@ -83,6 +83,8 @@ def sync_training_results(mode: str | None = None) -> dict[str, Any]:
         dvc_files=None,
         push=True,
     )
+    result["artifacts"] = artifacts  # pour le logger dans main.py
+    return result
 
 
 def sync_init(

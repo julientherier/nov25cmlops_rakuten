@@ -14,7 +14,6 @@ from mlops_rakuten.utils.cli import (
     sync_init,
     sync_ingest_data,
     sync_training_results
-
 )
 
 app = typer.Typer()
@@ -56,17 +55,12 @@ def init(
     mode = "force-rebuild" if force else "normal"
     logger.info(f"Init dataset [{mode}]")
 
-    if force:
-        import subprocess
-        # Vider les artefacts générés et le cache DVC
-        subprocess.run("rm -rf data/interim/* data/processed/* models/* reports/*", shell=True)
-        subprocess.run("dvc cache gc --workspace --all-branches -f", shell=True)
-
     _dvc("dvc pull 2>&1 || true")
     _dvc("dvc repro seed --force" if force else "dvc repro seed")
 
     results = sync_init(force=force)
     _check_sync(results, "init")
+
     logger.success("Init terminé — prêt pour `ingest` ou `train`.")
 
 
@@ -109,11 +103,15 @@ def train() -> None:
 
     _dvc("dvc pull 2>&1 || true")
     _dvc("dvc repro")
+    _dvc("dvc push")
+
+
 
     results = sync_training_results()
     _check_sync(results, "train")
 
-    logger.success(f"Training terminé — modèle v{results['version']}, f1={results['f1']}, run_id={results['run_id']}")
+    meta = results.get("artifacts", {})
+    logger.success(f"Training terminé — modèle v{meta.get('version','?')}, f1={meta.get('f1','?')}, run_id={meta.get('run_id','?')}")
 
 
 @app.command()
