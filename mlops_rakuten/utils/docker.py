@@ -15,7 +15,7 @@ import docker
 from loguru import logger
 from pathlib import Path
 
-from mlops_rakuten.utils.sync_core import sync_git_dvc,read_training_artifacts
+from mlops_rakuten.utils.sync_core import sync_git_dvc
 
 
 GIT_RUNNER_CONTAINER = "rakuten-git-runner"
@@ -107,16 +107,31 @@ def sync_ingest_data(
 
 
 def sync_training_results(mode: str | None = None) -> dict[str, Any]:
+    import json
     
-    artifacts = read_training_artifacts()
-    prefix = mode or "Docker-in-Docker"  
+    # Lire depuis le container dvc-runner via exec car en cli ce container n'existe pas.
+    try:
+        raw_meta = _dvc("cat /app/models/mlflow_run_metadata.json")
+        data = json.loads(raw_meta)
+        version = data.get("model_version", "?")
+        run_id = data.get("run_id", "unknown")[:7]
+    except Exception:
+        version, run_id = "?", "unknown"
+
+    try:
+        raw_f1 = _dvc("cat /app/reports/metrics_val.json")
+        f1 = str(round(json.loads(raw_f1).get("val_f1_macro", 0), 4))
+    except Exception:
+        f1 = "?"
+
+    prefix = mode or "Docker-in-Docker"
 
     return sync_git_dvc(
         run_dvc=_dvc,
         run_git=_git,
         commit_prefix=f"{prefix}:train",
-        commit_message=f"model v{artifacts['version']}, f1_macro={artifacts['f1']}, run_id={artifacts['run_id']}",
-        git_paths=["mlops_rakuten/"],
+        commit_message=f"model v{version}, f1_macro={f1}, run_id={run_id}",
+        git_paths=["dvc.lock", "models/", "reports/"],
         dvc_files=None,
         push=True,
     )
