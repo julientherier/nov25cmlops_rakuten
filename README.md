@@ -12,6 +12,7 @@ Classification de types de produits pour Rakuten France
 - [Modes d'exécution](#modes-dexécution)
 - [Project Organization](#project-organization)
 - [Installation](#installation)
+- [Contribuer — configuration Git/SSH requise](#contribuer--configuration-gitssh-requise)
 - [Structure du pipeline de données](#structure-du-pipeline-de-données)
 - [Sécurité et Gateway](#sécurité-et-gateway)
 - [Suivi d'expériences et versioning](#suivi-dexpériences-et-versioning)
@@ -321,6 +322,72 @@ GIT_AUTHOR_EMAIL=mlops@rakuten.local
 GITHUB_USER=shiff-oumi
 GITHUB_TOKEN=<token_github>
 ```
+## Contribuer — configuration Git/SSH requise
+
+Le pipeline commite et pousse automatiquement vers GitHub à chaque ingestion et entraînement. Chaque personne doit configurer son environnement une seule fois avant de lancer le projet.
+
+### Clé SSH
+
+La clé SSH est montée dans les containers via le volume `~/.ssh:/root/.ssh` (voir `docker-compose.yml`). Elle doit être active et reconnue par GitHub :
+
+Commencer par vérifier les clés existantes :
+```bash
+ls ~/.ssh/
+# → id_github, id_github.pub, id_rsa, known_hosts...
+```
+
+Si `id_github` est déjà présente, vérifier qu'elle est reconnue par GitHub :
+```bash
+ssh -i ~/.ssh/id_github -T git@github.com
+# → Hi ! You've successfully authenticated.
+```
+
+Si `id_github` n'existe pas encore :
+```bash
+# Créer la clé dédiée
+ssh-keygen -t ed25519 -f ~/.ssh/id_github -C "mlops@rakuten"
+
+# Copier la clé publique → GitHub > Settings > SSH Keys > New SSH Key
+cat ~/.ssh/id_github.pub
+```
+
+### Fork et remote
+
+Le push automatique cible le remote `myfork` par défaut (configuré dans `sync_git_dvc` de `utils/sync_core.py`). Chaque personne doit ajouter son fork comme remote :
+
+```bash
+git remote add myfork git@github.com:<ton-user>/nov25cmlops_rakuten_dag.git
+git remote -v   # vérifier : origin → repo principal, myfork → ton fork
+```
+
+Si ton fork porte un autre nom, deux options :
+
+```bash
+# Option 1 — renommer ton remote existant
+git remote rename origin myfork
+
+# Option 2 — passer le nom dans sync_git_dvc()
+sync_git_dvc(..., git_remote="ton-remote")
+```
+
+### Branche de travail
+
+La branche est détectée automatiquement via `git rev-parse --abbrev-ref HEAD` — le container lit la branche active depuis le volume `.git/` monté et pousse dessus directement. Il suffit d'être sur la bonne branche avant de lancer :
+
+```bash
+git checkout -b feature/<nom>
+make docker-up-cli    # le container voit ta branche courante
+make api-train        # → commit + push automatique sur feature/<nom>
+```
+
+### Checklist rapide
+
+| Étape | Commande |
+|-------|----------|
+| Clé SSH active | `ssh -i ~/.ssh/id_github -T git@github.com` |
+| Fork ajouté | `git remote add myfork git@github.com:<user>/...` |
+| Branche créée | `git checkout -b feature/<nom>` |
+| Variables .env | copier `.env.example` → `.env` et renseigner les tokens |
 
 ---
 
