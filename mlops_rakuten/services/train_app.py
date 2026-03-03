@@ -33,7 +33,7 @@ def train() -> Dict[str, Any]:
         logger.info("=" * 60)
         logger.info("Starting Training Pipeline...")
 
-        _dvc("dvc pull")
+        _dvc("dvc pull 2>&1 || true")
         _dvc("dvc repro")
 
         # sync_training_results lit la config en interne pour model_version/f1/run_id
