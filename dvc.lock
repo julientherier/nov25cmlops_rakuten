@@ -97,8 +97,8 @@ stages:
     deps:
     - path: data/interim/rakuten_train.csv
       hash: md5
-      md5: 166a2d36930c6b6d2c800d65edf9a70a
-      size: 5684172
+      md5: dfcb929e3862f855714af8cd33be8ae2
+      size: 5782684
     - path: mlops_rakuten/config/config.yml
       hash: md5
       md5: 85d4df6b2c00e6a114415230c06c702b
@@ -127,15 +127,15 @@ stages:
     outs:
     - path: data/interim/preprocessed_dataset.csv
       hash: md5
-      md5: 2b5427b6d648cf8828ef684a53cdce83
-      size: 5483460
+      md5: 6b9e4589892a9a4049401b62efa53c00
+      size: 5410533
   transform:
     cmd: python mlops_rakuten/pipelines/data_transformation.py
     deps:
     - path: data/interim/preprocessed_dataset.csv
       hash: md5
-      md5: 2b5427b6d648cf8828ef684a53cdce83
-      size: 5483460
+      md5: 6b9e4589892a9a4049401b62efa53c00
+      size: 5410533
     - path: mlops_rakuten/config/config.yml
       hash: md5
       md5: 85d4df6b2c00e6a114415230c06c702b
@@ -172,12 +172,12 @@ stages:
     outs:
     - path: data/processed/X_train_tfidf.npz
       hash: md5
-      md5: 6c6da15fd2cbbdaca6a6fd9dc9337788
-      size: 5828295
+      md5: a2cd2f36e882fcfac89b041a3b2c8f8e
+      size: 5760403
     - path: data/processed/X_val_tfidf.npz
       hash: md5
-      md5: a25be8abbb92385315cc2981f1f9cb52
-      size: 1416859
+      md5: 44bbbe06a309b3e590d178133f2c4c5f
+      size: 1386346
     - path: data/processed/class_mapping.json
       hash: md5
       md5: 1e3fc6fa70ee1316c3a22acbd76af9d3
@@ -188,27 +188,27 @@ stages:
       size: 458
     - path: data/processed/tfidf_vectorizer.pkl
       hash: md5
-      md5: ec569c9013fb0e3ba4f7341ec31522b0
-      size: 778269
+      md5: 87a64e6c17ad1a374362168ddbf7b676
+      size: 777692
     - path: data/processed/y_train.npy
       hash: md5
-      md5: fed33ff84b584e0254e40d6f0bc9de60
-      size: 467560
+      md5: 955c8bcec549d7d6a62de8384b69b374
+      size: 461448
     - path: data/processed/y_val.npy
       hash: md5
-      md5: 001a6a4dd013e27656835920ae2a36b5
-      size: 116992
+      md5: 6c266f9ac58b2e5e929406c296276f3d
+      size: 115464
   train:
     cmd: python mlops_rakuten/pipelines/model_trainer.py
     deps:
     - path: data/processed/X_train_tfidf.npz
       hash: md5
-      md5: 6c6da15fd2cbbdaca6a6fd9dc9337788
-      size: 5828295
+      md5: a2cd2f36e882fcfac89b041a3b2c8f8e
+      size: 5760403
     - path: data/processed/y_train.npy
       hash: md5
-      md5: fed33ff84b584e0254e40d6f0bc9de60
-      size: 467560
+      md5: 955c8bcec549d7d6a62de8384b69b374
+      size: 461448
     - path: mlops_rakuten/config/config.yml
       hash: md5
       md5: 85d4df6b2c00e6a114415230c06c702b
@@ -234,15 +234,15 @@ stages:
     outs:
     - path: models/classification_report_train.txt
       hash: md5
-      md5: 5389a91a97924b833c058225e77c1c98
+      md5: 6bf77052b73ae8271ce2c2568aad086b
       size: 1676
     - path: models/metrics_train.json
       hash: md5
-      md5: 71b9c52c6171d5c7a920647093b01240
-      size: 82
+      md5: 79004199afcee11e216eba07fd6730a5
+      size: 80
     - path: models/mlflow_run_metadata.json
       hash: md5
-      md5: 9fca874d697321bc6a5aba43b0d7fae9
+      md5: c38cd87a0a79932ebf56f105e4635d8d
       size: 121
     - path: models/model_config.json
       hash: md5
@@ -250,7 +250,7 @@ stages:
       size: 348
     - path: models/text_classifier.pkl
       hash: md5
-      md5: 2406907cc81b25487507112d24951cc5
+      md5: 323b68ace44c6d45d53e0dfbf4137af3
       size: 4321137
   evaluate:
     cmd: python mlops_rakuten/pipelines/model_evaluation.py
@@ -269,11 +269,11 @@ stages:
       size: 992
     - path: models/mlflow_run_metadata.json
       hash: md5
-      md5: 9fca874d697321bc6a5aba43b0d7fae9
+      md5: c38cd87a0a79932ebf56f105e4635d8d
       size: 121
     - path: models/text_classifier.pkl
       hash: md5
-      md5: 2406907cc81b25487507112d24951cc5
+      md5: 323b68ace44c6d45d53e0dfbf4137af3
       size: 4321137
     params:
       mlops_rakuten/config/config.yml:
@@ -287,13 +287,13 @@ stages:
     outs:
     - path: reports/classification_report_val.txt
       hash: md5
-      md5: cc95b9763b28b6838fba6d589a292c39
+      md5: b5c1f5b5cdd9e56d49b782d5cf3d171d
       size: 1676
     - path: reports/confusion_matrix_val.txt
       hash: md5
-      md5: 3be4a929860ae1a484b170aaaebb07bb
+      md5: 77c4aaaa1f715ad91d868d4ba039e80f
       size: 3780
     - path: reports/metrics_val.json
       hash: md5
-      md5: 4769de3c9ad390a60501acf5f815e30d
-      size: 117
+      md5: 728bd8fb5c059212f4c418760e567530
+      size: 118
