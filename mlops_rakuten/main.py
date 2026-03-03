@@ -13,35 +13,15 @@ from mlops_rakuten.utils.cli import (
     _dvc,               
     sync_init,
     sync_ingest_data,
-    sync_training_results,
+    sync_training_results
+
 )
 
 app = typer.Typer()
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers locaux (lecture de fichiers uniquement, pas de transport)
+# Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _read_train_metadata(model_dir: Path) -> dict:
-    """Lit mlflow_run_metadata.json → run_id (7 chars) et version."""
-    metadata_path = model_dir / "mlflow_run_metadata.json"
-    if not metadata_path.exists():
-        return {"run_id": "unknown", "version": "?"}
-    with open(metadata_path) as f:
-        data = json.load(f)
-    return {
-        "run_id": data.get("run_id", "unknown")[:7],
-        "version": data.get("model_version", "?"),
-    }
-
-
-def _read_val_f1(metrics_path: Path) -> str:
-    """Lit val_f1_macro depuis le fichier de métriques."""
-    if not metrics_path.exists():
-        return "?"
-    with open(metrics_path) as f:
-        return str(round(json.load(f).get("val_f1_macro", 0), 4))
 
 
 def _check_sync(results: dict, step: str) -> None:
@@ -76,12 +56,17 @@ def init(
     mode = "force-rebuild" if force else "normal"
     logger.info(f"Init dataset [{mode}]")
 
+    if force:
+        import subprocess
+        # Vider les artefacts générés et le cache DVC
+        subprocess.run("rm -rf data/interim/* data/processed/* models/* reports/*", shell=True)
+        subprocess.run("dvc cache gc --workspace --all-branches -f", shell=True)
+
     _dvc("dvc pull 2>&1 || true")
     _dvc("dvc repro seed --force" if force else "dvc repro seed")
 
     results = sync_init(force=force)
     _check_sync(results, "init")
-
     logger.success("Init terminé — prêt pour `ingest` ou `train`.")
 
 
@@ -124,19 +109,11 @@ def train() -> None:
 
     _dvc("dvc pull 2>&1 || true")
     _dvc("dvc repro")
-    _dvc("dvc push")
-
-    config = ConfigurationManager()
-    model_path   = Path(config.get_model_trainer_config().model_path)
-    metrics_path = Path(config.get_model_evaluation_config().metrics_path)
-
-    meta = _read_train_metadata(model_path.parent)
-    f1   = _read_val_f1(metrics_path)
 
     results = sync_training_results()
     _check_sync(results, "train")
 
-    logger.success(f"Training terminé — modèle v{meta['version']}, f1={f1}, run_id={meta['run_id']}")
+    logger.success(f"Training terminé — modèle v{results['version']}, f1={results['f1']}, run_id={results['run_id']}")
 
 
 @app.command()
