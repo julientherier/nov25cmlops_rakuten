@@ -37,9 +37,10 @@ def train() -> Dict[str, Any]:
         # On utilise --local pour ne pas modifier le fichier dvc/config qui est versionné par Git
         dagshub_token = os.getenv("DAGSHUB_TOKEN")
         logger.info("Configuring DVC authentication...")
+        _dvc("dvc remote modify --local storage --unset auth") 
+        _dvc(f"dvc remote modify --local storage user samuel.beau")
         _dvc(f"dvc remote modify --local storage password {dagshub_token}")
-        _dvc(f"dvc remote modify --local storage user {os.getenv('DAGSHUB_USER', 'samuel.beau')}")
-        #_dvc(f"dvc remote modify --local origin password {dagshub_token}")
+        _dvc("dvc remote modify --local storage auth basic")
         # ----------------------------------------------
 
 
