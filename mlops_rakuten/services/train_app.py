@@ -32,6 +32,15 @@ def train() -> Dict[str, Any]:
     try:
         logger.info("=" * 60)
         logger.info("Starting Training Pipeline...")
+        
+        # --- AJOUT : Configuration du Token DagsHub ---
+        # On utilise --local pour ne pas modifier le fichier dvc/config qui est versionné par Git
+        dagshub_token = os.getenv("DAGSHUB_TOKEN")
+        logger.info("Configuring DVC authentication...")
+        _dvc(f"dvc remote modify --local storage password {dagshub_token}")
+        _dvc(f"dvc remote modify --local storage user {os.getenv('DAGSHUB_USER', 'samuel.beau')}")
+        #_dvc(f"dvc remote modify --local origin password {dagshub_token}")
+        # ----------------------------------------------
 
 
         # ici le true permet de ne pas échouer si il y a deja des elements dans le cache distant, on veut juste s'assurer d'avoir la derniere version avant de lancer le repro et ecraser les changements locaux.
