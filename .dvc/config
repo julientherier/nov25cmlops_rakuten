@@ -1,7 +1,2 @@
 [core]
-    remote = origin
     autostage = true
-    check_update = false
-['remote "origin"']
-    url = s3://dvc
-    endpointurl = https://dagshub.com/shiff-oumi/nov25cmlops_rakuten_dag.s3
