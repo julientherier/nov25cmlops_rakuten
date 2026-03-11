@@ -1,2 +1,5 @@
 [core]
     autostage = true
+    remote = storage
+['remote "storage"']
+    url = https://dagshub.com/samuel.beau/nov25cmlops_rakuten_dag.dvc
