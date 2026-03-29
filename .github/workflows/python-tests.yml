@@ -1,0 +1,53 @@
+name: CI MLOps Rakuten
+
+# Déclencheur : s'exécute à chaque push ou pull request sur la branche main
+on:
+  push:
+    branches: 
+        #[ main, master ]
+        - feature/mlflow-docker-dvc-sb-2
+
+  pull_request:
+    branches: 
+        #[ main, master ]
+        - feature/mlflow-docker-dvc-sb-2
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. On récupère le code du dépôt
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. On installe Python 3.12 (comme sur votre Mac)
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip' # Accélère les prochains runs en mettant les libs en cache
+
+      # 3. Installation des dépendances
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # On installe les outils de test
+          pip install pytest pytest-mock httpx
+          # On installe vos dépendances projet
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Installation du mode éditable pour que 'import mlops_rakuten' fonctionne
+          pip install -e .
+
+      # 4. Récupérer les données/modèles depuis DagsHub
+      - name: DVC Pull
+        run: |
+          # Configure le remote DVC pour utiliser les credentials (S3-like pour DagsHub)
+          dvc remote modify origin --project auth basic
+          dvc pull
+
+      # 5. Exécution de TOUS les tests dans le dossier /tests
+      - name: Run all tests
+        run: |
+          # On lance pytest sur le dossier entier
+          pytest tests/
