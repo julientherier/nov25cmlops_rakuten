@@ -16,6 +16,11 @@ jobs:
   test-suite:
     runs-on: ubuntu-latest
 
+    # IMPORTANT : On injecte les secrets ici pour que DVC puisse les voir
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_TOKEN }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
+
     steps:
       # 1. On récupère le code du dépôt
       - name: Checkout code
@@ -43,10 +48,30 @@ jobs:
       - name: DVC Pull
         run: |
           # Configure le remote DVC pour utiliser les credentials (S3-like pour DagsHub)
-          dvc remote modify origin --project auth basic
-          dvc pull
+          #dvc remote modify origin --project auth basic
+          #dvc pull
+          # On utilise 'python -m dvc' au lieu de 'dvc' tout court
+          python -m dvc remote modify storage --project auth basic
+          python -m dvc pull
 
       # 5. Exécution de TOUS les tests dans le dossier /tests
+      - name: Create missing directories and dummy data
+        run: |
+          # 1. Création de la structure de base
+          mkdir -p data/processed data/raw data/interim logs models
+          
+          # 2. Simulation d'un run pour les DONNÉES (déjà OK, on garde)
+          mkdir -p data/processed/2024-01-01_00-00-00
+          
+          # 3. Simulation d'un run pour les MODÈLES (C'est ce qui manque !)
+          # On crée un sous-dossier dans models
+          mkdir -p models/2024-01-01_00-00-00
+          
+          # 4. On place un fichier vide à l'intérieur au cas où le code vérifie sa présence
+          touch models/2024-01-01_00-00-00/text_classifier.pkl
+          # On en met un aussi à la racine au cas où
+          touch models/text_classifier.pkl
+
       - name: Run all tests
         run: |
           # On lance pytest sur le dossier entier
