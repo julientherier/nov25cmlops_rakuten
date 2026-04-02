@@ -47,11 +47,17 @@ jobs:
       # 4. Récupérer les données/modèles depuis DagsHub
       - name: DVC Pull
         run: |
-          # Configure le remote DVC pour utiliser les credentials (S3-like pour DagsHub)
-          #dvc remote modify origin --project auth basic
-          #dvc pull
-          # On utilise 'python -m dvc' au lieu de 'dvc' tout court
-          python -m dvc remote modify storage --project auth basic
+          # 1. On définit le mode d'authentification
+          python -m dvc remote modify storage auth basic
+          
+          # 2. On injecte le nom d'utilisateur (votre pseudo DagsHub)
+          # Remplacez 'samuel.beau' par votre vrai pseudo si nécessaire
+          python -m dvc remote modify storage user samuel.beau
+          
+          # 3. On injecte le token comme mot de passe
+          python -m dvc remote modify storage password ${{ secrets.DAGSHUB_TOKEN }}
+          
+          # 4. Maintenant on peut pull
           python -m dvc pull
 
       # 5. Exécution de TOUS les tests dans le dossier /tests
