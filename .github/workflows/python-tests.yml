@@ -1,6 +1,6 @@
 name: CI MLOps Rakuten
 
-# Déclencheur : s'exécute à chaque push ou pull request sur la branche : feature/mlflow-docker-dvc-sb-2
+# Déclencheur : s'exécute à chaque push ou pull request sur la branche  feature/mlflow-docker-dvc-sb-2
 on:
   push:
     branches: 
