@@ -1,84 +1,77 @@
-name: CI MLOps Rakuten
+name: CI/CD MLOps Rakuten
 
-# Déclencheur : s'exécute à chaque push ou pull request sur la branche  feature/mlflow-docker-dvc-sb-2
 on:
   push:
     branches: 
-        #[ main, master ]
-        - feature/mlflow-docker-dvc-sb-2
-
+      - feature/mlflow-docker-dvc-sb-2
   pull_request:
     branches: 
-        #[ main, master ]
-        - feature/mlflow-docker-dvc-sb-2
+      - feature/mlflow-docker-dvc-sb-2
 
 jobs:
+  # PREMIER JOB : Les Tests (votre configuration actuelle qui fonctionne)
   test-suite:
     runs-on: ubuntu-latest
-
-    # IMPORTANT : On injecte les secrets ici pour que DVC puisse les voir
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.DAGSHUB_TOKEN }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DAGSHUB_TOKEN }}
-
     steps:
-      # 1. On récupère le code du dépôt
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. On installe Python 3.12 (comme sur votre Mac)
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip' # Accélère les prochains runs en mettant les libs en cache
+          cache: 'pip'
 
-      # 3. Installation des dépendances
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # On installe les outils de test
           pip install pytest pytest-mock httpx
-          # On installe vos dépendances projet
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # Installation du mode éditable pour que 'import mlops_rakuten' fonctionne
           pip install -e .
 
-      # 4. Récupérer les données/modèles depuis DagsHub
       - name: DVC Pull
         run: |
-          # 1. On définit le mode d'authentification
           python -m dvc remote modify storage auth basic
-          
-          # 2. On injecte le nom d'utilisateur (votre pseudo DagsHub)
-          # Remplacez 'samuel.beau' par votre vrai pseudo si nécessaire
           python -m dvc remote modify storage user samuel.beau
-          
-          # 3. On injecte le token comme mot de passe
           python -m dvc remote modify storage password ${{ secrets.DAGSHUB_TOKEN }}
-          
-          # 4. Maintenant on peut pull
           python -m dvc pull
 
-      # 5. Exécution de TOUS les tests dans le dossier /tests
       - name: Create missing directories and dummy data
         run: |
-          # 1. Création de la structure de base
           mkdir -p data/processed data/raw data/interim logs models
-          
-          # 2. Simulation d'un run pour les DONNÉES (déjà OK, on garde)
           mkdir -p data/processed/2024-01-01_00-00-00
-          
-          # 3. Simulation d'un run pour les MODÈLES (C'est ce qui manque !)
-          # On crée un sous-dossier dans models
           mkdir -p models/2024-01-01_00-00-00
-          
-          # 4. On place un fichier vide à l'intérieur au cas où le code vérifie sa présence
           touch models/2024-01-01_00-00-00/text_classifier.pkl
-          # On en met un aussi à la racine au cas où
           touch models/text_classifier.pkl
 
       - name: Run all tests
         run: |
-          # On lance pytest sur le dossier entier
           pytest tests/
+
+  # DEUXIÈME JOB : Build & Push Docker
+  build-and-push-docker:
+    needs: test-suite # IMPORTANT : N'exécute ce job que si 'test-suite' est réussi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          # Vous devez créer ces secrets dans les paramètres GitHub de Julien
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Remplacez 'votre_pseudo_docker' par votre vrai pseudo Docker Hub
+          tags: |
+            votre_pseudo_docker/rakuten-api:latest
+            votre_pseudo_docker/rakuten-api:${{ github.sha }}
