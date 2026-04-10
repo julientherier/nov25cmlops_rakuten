@@ -73,5 +73,5 @@ jobs:
           push: true
           # Remplacez 'votre_pseudo_docker' par votre vrai pseudo Docker Hub
           tags: |
-            votre_pseudo_docker/rakuten-api:latest
-            votre_pseudo_docker/rakuten-api:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/rakuten-api:latest
+            ${{ secrets.DOCKER_USERNAME }}/rakuten-api:${{ github.sha }}
